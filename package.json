@@ -1,7 +1,7 @@
 {
   "name": "@r0b0t3d/react-native-carousel",
   "title": "React Native Carousel",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "main": "lib/index.js",
   "scripts": {

@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "jsx": "react",
+    "noImplicitReturns": true,
+    "noUnusedLocals": false,
+    "lib": ["es6"],
+    "outDir": "lib",
+    "sourceMap": true,
+    "strict": true,
+    "target": "esnext",
+    "resolveJsonModule": true,
+    "declaration": true,
+    "module": "es2015",
+    "moduleResolution": "node",
+    "allowJs": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "noImplicitAny": false
+  },
+  "compileOnSave": true,
+  "include": [
+    "src/**/*",
+  ],
+  "exclude": [
+    "node_modules",
+    "src/__tests__",
+    "src/__mocks__",
+    "**/*.spec.ts"
+  ]
+}

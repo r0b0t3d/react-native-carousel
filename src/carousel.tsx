@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, Dimensions, StyleSheet, ViewStyle, StyleProp } from 'react-native';
+import { View, Dimensions, StyleSheet } from 'react-native';
 import { useInterval } from '@r0b0t3d/react-native-hooks';
 import Indicator from './indicator';
 import { CarouselProps, CarouselData } from './types';

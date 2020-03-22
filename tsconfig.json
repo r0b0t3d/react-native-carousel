@@ -15,7 +15,6 @@
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "isolatedModules": true,
-    "noEmit": true,
     "noImplicitAny": false
   },
   "compileOnSave": true,

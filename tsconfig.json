@@ -15,11 +15,12 @@
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "isolatedModules": true,
-    "noImplicitAny": false
+    "noImplicitAny": false,
+    "skipLibCheck": true
   },
   "compileOnSave": true,
   "include": [
-    "src/**/*",
+    "src/**/*", "carousel",
   ],
   "exclude": [
     "node_modules",

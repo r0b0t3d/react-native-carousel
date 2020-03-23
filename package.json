@@ -5,6 +5,7 @@
   "description": "",
   "main": "lib/index.js",
   "scripts": {
+    "deploy": "cp -R lib example/node_modules/@r0b0t3d/react-native-carousel",
     "build": "rm -rf lib && tsc",
     "format": "prettier --write \"src/**/*.ts\" \"src/**/*.js\"",
     "lint": "eslint src/**/*.ts",
@@ -37,7 +38,8 @@
   },
   "peerDependencies": {
     "react": "^16.8.1",
-    "react-native": ">=0.59.0-rc.0 <1.0.x"
+    "react-native": ">=0.59.0-rc.0 <1.0.x",
+    "react-native-reanimated": "^1.7.0"
   },
   "devDependencies": {
     "@types/jest": "^24.0.19",
@@ -52,6 +54,7 @@
     "prettier": "^1.18.2",
     "react": "^16.8.3",
     "react-native": "^0.59.10",
+    "react-native-reanimated": "^1.7.0",
     "ts-jest": "^24.1.0",
     "typescript": "^3.6.4"
   },

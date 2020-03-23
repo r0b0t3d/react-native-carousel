@@ -1,44 +1,50 @@
+/* eslint-disable no-nested-ternary */
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, Dimensions, StyleSheet } from 'react-native';
+import { View, Dimensions, StyleSheet, Image } from 'react-native';
 import { useInterval } from '@r0b0t3d/react-native-hooks';
-import Indicator from './indicator';
+import Animated, { block, set, call, Value } from 'react-native-reanimated';
 import { CarouselProps, CarouselData } from './types';
+import Indicator from './indicator';
 
-const { width: wWidth } = Dimensions.get('window');
+const { width: wWidth } = Dimensions.get('screen');
 
-let Animated: any = null;
-try {
-  //@ts-ignore
-  Animated = require('react-native-reanimated');
-} catch (error) {
-  Animated = require('react-native').Animated;
+function useAnimatedValue(initial): Animated.Value<any> {
+  const value = useRef(new Value(initial));
+  return value.current;
 }
 
 export default function Carousel({
+  style,
   data,
   loop = false,
   autoPlay = false,
   duration = 1000,
   indicatorContainerStyle,
   renderIndicator,
+  renderImage,
   renderOverlay,
 }: CarouselProps) {
   const [currentPage, setCurrentPage] = useState(loop ? 1 : 0);
-  const animatedScroll = new Animated.Value(0);
+  const animatedScroll = useAnimatedValue(0);
   const [isDragging, setDragging] = useState(false);
 
-  const scrollViewRef = useRef<any>();
+  const scrollViewRef = useRef<any>(null);
+  const currentOffset = useRef(0);
 
   useEffect(() => {
-    goToPage(currentPage, false);
+    requestAnimationFrame(() => {
+      goToPage(currentPage, false);
+    });
   }, []);
 
   useEffect(() => {
     if (!loop) return;
     if (currentPage === data.length + 1) {
-      goToPage(1, false);
-      setCurrentPage(1);
+      requestAnimationFrame(() => {
+        goToPage(1, false);
+        setCurrentPage(1);
+      });
     }
     if (currentPage === 0) {
       goToPage(data.length, false);
@@ -60,7 +66,6 @@ export default function Carousel({
   function goToPage(page: number, animated = true) {
     const to = page * wWidth;
     scrollViewRef.current.getNode().scrollTo({ x: to, y: 0, animated });
-    setCurrentPage(page);
   }
 
   function onScrollEnd(e) {
@@ -80,12 +85,23 @@ export default function Carousel({
     return animatedScroll.interpolate({
       inputRange,
       outputRange,
-      extrapolate: 'clamp',
+      extrapolate: Animated.Extrapolate.CLAMP,
     });
   }
 
+  const getCurrentPage = () => {
+    if (loop) {
+      if (currentPage > data.length) return 0;
+      if (currentPage === 0) return data.length - 1;
+      return currentPage - 1;
+    }
+    return currentPage;
+  };
+
+  const indicatorIndex = getCurrentPage();
+
   return (
-    <View style={{ flex: 1 }}>
+    <View style={[style]}>
       <Animated.ScrollView
         ref={scrollViewRef}
         style={{ flex: 1, backgroundColor: 'black' }}
@@ -93,14 +109,28 @@ export default function Carousel({
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         scrollEventThrottle={16}
-        onScrollBeginDrag={() => setDragging(true)}
+        onScrollBeginDrag={() => {
+          const pageNum = Math.floor(currentOffset.current / wWidth);
+          if (pageNum >= 0 && pageNum !== currentPage) {
+            setCurrentPage(pageNum);
+          }
+          setDragging(true);
+        }}
         onScrollEndDrag={() => setDragging(false)}
         onScroll={Animated.event(
           [
             {
               nativeEvent: {
                 contentOffset: {
-                  x: animatedScroll,
+                  x: x =>
+                    block([
+                      set(animatedScroll, x),
+                      call(
+                        [x],
+                        // eslint-disable-next-line no-return-assign
+                        ([offsetX]) => (currentOffset.current = offsetX),
+                      ),
+                    ]),
                 },
               },
             },
@@ -109,20 +139,35 @@ export default function Carousel({
         )}
         onMomentumScrollEnd={onScrollEnd}
       >
-        {loop && <PageItem item={data[data.length - 1]} translateX={getInterpolate(0)} renderOverlay={renderOverlay} />}
+        {loop && (
+          <PageItem
+            item={data[data.length - 1]}
+            translateX={getInterpolate(0)}
+            renderImage={renderImage}
+            renderOverlay={renderOverlay}
+          />
+        )}
         {data.map((item, i) => (
           <PageItem
             key={item.id}
             item={item}
             translateX={getInterpolate(i + (loop ? 1 : 0))}
+            renderImage={renderImage}
             renderOverlay={renderOverlay}
           />
         ))}
-        {loop && <PageItem item={data[0]} translateX={getInterpolate(data.length + 1)} renderOverlay={renderOverlay} />}
+        {loop && (
+          <PageItem
+            item={data[0]}
+            translateX={getInterpolate(data.length + 1)}
+            renderImage={renderImage}
+            renderOverlay={renderOverlay}
+          />
+        )}
       </Animated.ScrollView>
       <Indicator
         totalPage={data.length}
-        currentPage={currentPage}
+        currentPage={indicatorIndex}
         style={indicatorContainerStyle}
         renderIndicator={renderIndicator}
       />
@@ -130,21 +175,48 @@ export default function Carousel({
   );
 }
 
-function PageItem({ item, translateX, renderOverlay }: { item: CarouselData; translateX: any; renderOverlay?: any }) {
+function PageItem({
+  item,
+  translateX,
+  renderImage,
+  renderOverlay,
+}: {
+  item: CarouselData;
+  translateX: any;
+  renderImage?: any;
+  renderOverlay?: any;
+}) {
   const animateStyle = {
     transform: [{ translateX }],
   };
 
   return (
-    <View collapsable={false} style={{ width: wWidth, overflow: 'hidden', backgroundColor: 'black' }}>
-      <Animated.Image
-        source={{ uri: item.url }}
-        style={[{ flex: 1, backgroundColor: 'red' }, animateStyle]}
-        resizeMode="cover"
-      />
+    <View
+      collapsable={false}
+      style={{
+        width: wWidth,
+        overflow: 'hidden',
+        backgroundColor: 'black',
+      }}
+    >
+      <Animated.View style={[{ flex: 1 }, animateStyle]}>
+        {renderImage ? (
+          renderImage(item)
+        ) : (
+          <Image
+            source={item.source!}
+            style={{
+              ...StyleSheet.absoluteFillObject,
+              height: undefined,
+              width: undefined,
+            }}
+            resizeMode="cover"
+          />
+        )}
+      </Animated.View>
       {renderOverlay && (
         <View style={StyleSheet.absoluteFill} collapsable={false}>
-          {renderOverlay({ item })}
+          {renderOverlay(item)}
         </View>
       )}
     </View>

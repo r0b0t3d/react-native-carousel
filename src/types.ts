@@ -3,7 +3,7 @@ import { StyleProp, ViewStyle, ImageSourcePropType } from 'react-native';
 export type CarouselData = {
   id: string;
   source?: ImageSourcePropType;
-  [key: string]: any,
+  [key: string]: any;
 };
 
 export type CarouselProps = {

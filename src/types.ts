@@ -7,12 +7,12 @@ export type CarouselData = {
 };
 
 export type CarouselProps = {
-  style: StyleProp<ViewStyle>;
+  style?: StyleProp<ViewStyle>;
   data: CarouselData[];
-  loop: boolean;
-  autoPlay: boolean;
-  duration: number;
-  indicatorContainerStyle: StyleProp<ViewStyle>;
+  loop?: boolean;
+  autoPlay?: boolean;
+  duration?: number;
+  indicatorContainerStyle?: StyleProp<ViewStyle>;
   renderIndicator?: ({ selected }: { selected: boolean }) => React.ReactNode;
   renderImage?: (item: any) => React.ReactNode;
   renderOverlay?: (item: CarouselData) => React.ReactNode;

@@ -14,7 +14,7 @@ export type CarouselProps = {
   duration?: number;
   useIndicator?: boolean;
   indicatorContainerStyle?: StyleProp<ViewStyle>;
-  renderIndicator?: (props: { selected: boolean, index: number }) => React.ReactNode;
+  renderIndicator?: (props: { selected: boolean; index: number }) => React.ReactNode;
   renderImage?: (item: any) => React.ReactNode;
   renderOverlay?: (item: CarouselData) => React.ReactNode;
   onPageChange?: (item: CarouselData, index: number) => void;

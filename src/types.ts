@@ -12,8 +12,10 @@ export type CarouselProps = {
   loop?: boolean;
   autoPlay?: boolean;
   duration?: number;
+  useIndicator?: boolean;
   indicatorContainerStyle?: StyleProp<ViewStyle>;
-  renderIndicator?: ({ selected }: { selected: boolean }) => React.ReactNode;
+  renderIndicator?: (props: { selected: boolean, index: number }) => React.ReactNode;
   renderImage?: (item: any) => React.ReactNode;
   renderOverlay?: (item: CarouselData) => React.ReactNode;
+  onPageChange?: (item: CarouselData, index: number) => void;
 };

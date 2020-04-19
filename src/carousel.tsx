@@ -20,6 +20,7 @@ export default function Carousel({
   loop = false,
   autoPlay = false,
   duration = 1000,
+  useIndicator = true,
   indicatorContainerStyle,
   renderIndicator,
   renderImage,
@@ -65,7 +66,9 @@ export default function Carousel({
 
   function goToPage(page: number, animated = true) {
     const to = page * wWidth;
-    scrollViewRef.current.getNode().scrollTo({ x: to, y: 0, animated });
+    if (scrollViewRef.current) {
+      scrollViewRef.current.getNode().scrollTo({ x: to, y: 0, animated });
+    }
   }
 
   function onScrollEnd(e) {
@@ -165,12 +168,14 @@ export default function Carousel({
           />
         )}
       </Animated.ScrollView>
-      <Indicator
-        totalPage={data.length}
-        currentPage={indicatorIndex}
-        style={indicatorContainerStyle}
-        renderIndicator={renderIndicator}
-      />
+      {useIndicator && (
+        <Indicator
+          totalPage={data.length}
+          currentPage={indicatorIndex}
+          style={indicatorContainerStyle}
+          renderIndicator={renderIndicator}
+        />
+      )}
     </View>
   );
 }

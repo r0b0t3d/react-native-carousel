@@ -19,3 +19,8 @@ export type CarouselProps = {
   renderOverlay?: (item: CarouselData) => React.ReactNode;
   onPageChange?: (item: CarouselData, index: number) => void;
 };
+
+export type Carousel = {
+  next(): void;
+  prev(): void;
+}

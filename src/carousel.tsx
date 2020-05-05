@@ -1,11 +1,11 @@
 /* eslint-disable no-nested-ternary */
 /* eslint-disable @typescript-eslint/no-use-before-define */
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useImperativeHandle, forwardRef, Ref } from 'react';
 import { View, Dimensions, StyleSheet, Image } from 'react-native';
 import { useInterval } from '@r0b0t3d/react-native-hooks';
 import Animated, { block, set, call, Value } from 'react-native-reanimated';
-import { CarouselProps, CarouselData } from './types';
 import Indicator from './indicator';
+import { CarouselProps, Carousel, CarouselData } from './types';
 
 const { width: wWidth } = Dimensions.get('screen');
 
@@ -14,7 +14,7 @@ function useAnimatedValue(initial): Animated.Value<any> {
   return value.current;
 }
 
-export default function Carousel({
+function Carousel({
   style,
   data,
   loop = false,
@@ -25,13 +25,19 @@ export default function Carousel({
   renderIndicator,
   renderImage,
   renderOverlay,
-}: CarouselProps) {
-  const [currentPage, setCurrentPage] = useState(loop ? 1 : 0);
+  onPageChange,
+}: CarouselProps, ref: Ref<Carousel>) {
   const animatedScroll = useAnimatedValue(0);
+  const [currentPage, setCurrentPage] = useState(loop ? 1 : 0);
   const [isDragging, setDragging] = useState(false);
 
   const scrollViewRef = useRef<any>(null);
   const currentOffset = useRef(0);
+
+  useImperativeHandle(ref, () => ({
+    next: goNext,
+    prev: goPrev,
+  }));
 
   useEffect(() => {
     requestAnimationFrame(() => {
@@ -40,6 +46,10 @@ export default function Carousel({
   }, []);
 
   useEffect(() => {
+    if (onPageChange) {
+      const index = getCurrentPage();
+      onPageChange(data[index], index);
+    }
     if (!loop) return;
     if (currentPage === data.length + 1) {
       requestAnimationFrame(() => {
@@ -55,6 +65,10 @@ export default function Carousel({
 
   const goNext = useCallback(() => {
     goToPage(currentPage + 1);
+  }, [currentPage]);
+
+  const goPrev = useCallback(() => {
+    goToPage(currentPage - 1);
   }, [currentPage]);
 
   useInterval(
@@ -107,7 +121,7 @@ export default function Carousel({
     <View style={[style]}>
       <Animated.ScrollView
         ref={scrollViewRef}
-        style={{ flex: 1, backgroundColor: 'black' }}
+        style={{ flex: 1 }}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
@@ -179,6 +193,8 @@ export default function Carousel({
     </View>
   );
 }
+
+export default forwardRef(Carousel);
 
 function PageItem({
   item,

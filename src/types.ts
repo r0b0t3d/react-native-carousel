@@ -23,4 +23,4 @@ export type CarouselProps = {
 export type Carousel = {
   next(): void;
   prev(): void;
-}
+};

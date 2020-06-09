@@ -953,10 +953,9 @@
     chalk "^3.0.0"
 
 "@r0b0t3d/react-native-carousel@file:..":
-  version "1.0.3"
+  version "1.0.7"
   dependencies:
     "@r0b0t3d/react-native-hooks" "^1.0.1"
-    react-native-reanimated "^1.7.0"
 
 "@r0b0t3d/react-native-hooks@^1.0.1":
   version "1.0.1"

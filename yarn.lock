@@ -829,10 +829,10 @@
     "@types/istanbul-reports" "^1.1.1"
     "@types/yargs" "^13.0.0"
 
-"@r0b0t3d/react-native-hooks@^1.0.1":
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/@r0b0t3d/react-native-hooks/-/react-native-hooks-1.0.1.tgz#7dd3eb087443979a431dbaac1bf11cf44b343504"
-  integrity sha512-9e1b1AkUVtpG0te8gKvNpZdX0/WQkJ2NPReEmQI/nYZr78bZcBDQh/sULe8jAwZB5mUNf/6rgT58D3A1s3fbpA==
+"@r0b0t3d/react-native-hooks@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@r0b0t3d/react-native-hooks/-/react-native-hooks-1.0.2.tgz#06660801f665fe05bb77b881d9440e4278da8fe4"
+  integrity sha512-oBiK3yadQyh7LsM9CZCf2PYNFGd8gDskbxuAQWwhsQJmsVPDqFwx9h9+KxLj2Av5f8av2aE0uOv7QHhCYbuAsQ==
 
 "@react-native-community/cli@^1.2.1":
   version "1.12.0"
@@ -5116,10 +5116,12 @@ react-is@^16.8.1, react-is@^16.8.4:
   resolved "https://registry.yarnpkg.com/react-is/-/react-is-16.13.1.tgz#789729a4dc36de2999dc156dd6c1d9c18cea56a4"
   integrity sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==
 
-react-native-reanimated@^1.7.0:
-  version "1.7.0"
-  resolved "https://registry.yarnpkg.com/react-native-reanimated/-/react-native-reanimated-1.7.0.tgz#896db2576552ac59d288a1f6c7f00afc171f240c"
-  integrity sha512-FQWSqP605eQVJumuK2HpR+7heF0ZI+qfy4jNguv3Xv8nPFHeIgZaRTXHCEQL2AcuSIj50zy8jGJf5l134QMQWQ==
+react-native-reanimated@^1.9.0:
+  version "1.9.0"
+  resolved "https://registry.yarnpkg.com/react-native-reanimated/-/react-native-reanimated-1.9.0.tgz#38676c99dd585504fdc7331efb45e5f48ec7339a"
+  integrity sha512-Aj+spgIHRiVv7ezGADxnSH1EoKrQRD2+XaSiGY0MiB/pvRNNrZPSJ+3NVpvLwWf9lZMOP7dwqqyJIzoZgBDt8w==
+  dependencies:
+    fbjs "^1.0.0"
 
 react-native@^0.59.10:
   version "0.59.10"

@@ -25,10 +25,6 @@ const data = [{
   source: { uri: 'https://4.bp.blogspot.com/_N44PgSKJwQY/TOtoPtIo3_I/AAAAAAAAANE/7WwIFzgm-IU/s1600/Danboard.obstacles.jpg'},
   url: 'https://4.bp.blogspot.com/_N44PgSKJwQY/TOtoPtIo3_I/AAAAAAAAANE/7WwIFzgm-IU/s1600/Danboard.obstacles.jpg',
 }, {
-  id: 'image4',
-  source: { uri: 'https://lh3.googleusercontent.com/proxy/W0B7aLGo1tiQz4uHQmtwXzyk6exSHkIxXqB-yVNHK_uvHmuKrkgt02sFM3y9W-jDdsNdtd5OiJTWlEb4SB0mytEYnLDHMEUaHxxZBOohd3Gdh-6JC6ZLIZ0aJDis' },
-  url: 'https://lh3.googleusercontent.com/proxy/W0B7aLGo1tiQz4uHQmtwXzyk6exSHkIxXqB-yVNHK_uvHmuKrkgt02sFM3y9W-jDdsNdtd5OiJTWlEb4SB0mytEYnLDHMEUaHxxZBOohd3Gdh-6JC6ZLIZ0aJDis',
-}, {
   id: 'image5',
   source: { uri: 'https://i.pinimg.com/originals/97/17/8a/97178ac9a3e25b3080a0e7f8b728ac29.jpg' },
   url: 'https://i.pinimg.com/originals/97/17/8a/97178ac9a3e25b3080a0e7f8b728ac29.jpg',
@@ -47,6 +43,7 @@ export default function App() {
           data={data}
           loop
           autoPlay
+          duration={3000}
           renderImage={(item) => {
             return <Image
               style={{

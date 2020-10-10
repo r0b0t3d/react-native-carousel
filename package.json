@@ -37,7 +37,7 @@
   "peerDependencies": {
     "react": "^16.8.1",
     "react-native": ">=0.59.0-rc.0 <1.0.x",
-    "react-native-reanimated": "^1.9.0"
+    "react-native-reanimated": "^2.0.0-alpha.7"
   },
   "devDependencies": {
     "@types/jest": "^24.0.19",
@@ -50,7 +50,7 @@
     "eslint-plugin-prettier": "^3.1.1",
     "jest": "^24.9.0",
     "prettier": "^1.18.2",
-    "react-native-reanimated": "^1.9.0",
+    "react-native-reanimated": "^2.0.0-alpha.7",
     "ts-jest": "^24.1.0",
     "typescript": "^3.6.4"
   },

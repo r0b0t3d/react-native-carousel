@@ -1,19 +1,14 @@
 /* eslint-disable no-nested-ternary */
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import React, { useState, useRef, useEffect, useCallback, useImperativeHandle, forwardRef, Ref } from 'react';
-import { View, Dimensions } from 'react-native';
+import { View, Dimensions, InteractionManager } from 'react-native';
 import { useInterval } from '@r0b0t3d/react-native-hooks';
-import Animated, { block, set, call, Value } from 'react-native-reanimated';
+import Animated, { block, set, call, Value, useSharedValue, useAnimatedScrollHandler } from 'react-native-reanimated';
 import Indicator from './indicator';
 import { CarouselProps, CarouselRef } from './types';
 import PageItem from './page-item';
 
 const { width: wWidth } = Dimensions.get('screen');
-
-function useAnimatedValue(initial): Animated.Value<any> {
-  const value = useRef(new Value(initial));
-  return value.current;
-}
 
 function Carousel(
   {
@@ -32,12 +27,12 @@ function Carousel(
   }: CarouselProps,
   ref: Ref<CarouselRef>,
 ) {
-  const animatedScroll = useAnimatedValue(0);
+  const animatedScroll = useSharedValue(0);
+
   const [currentPage, setCurrentPage] = useState(loop ? 1 : 0);
   const [isDragging, setDragging] = useState(false);
 
   const scrollViewRef = useRef<any>(null);
-  const currentOffset = useRef(0);
 
   useImperativeHandle(ref, () => ({
     next: goNext,
@@ -48,6 +43,23 @@ function Carousel(
     handleScrollTo(currentPage, false);
   }, []);
 
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      animatedScroll.value = event.contentOffset.x;
+    },
+    onBeginDrag: (e) => {
+      const pageNum = Math.floor(animatedScroll.value / wWidth);
+      // setDragging(true);const pageNum = Math.floor(animatedScroll.value / wWidth);
+      if (pageNum >= 0 && pageNum !== currentPage) {
+        setCurrentPage(pageNum);
+      }
+      setDragging(true);
+    },
+    onEndDrag: (e) => {
+      // setDragging(false);
+    },
+  })
+
   useEffect(() => {
     if (onPageChange) {
       const index = getCurrentPage();
@@ -56,13 +68,13 @@ function Carousel(
     if (!loop) return;
     if (currentPage === data.length + 1) {
       setTimeout(() => {
-        animatedScroll.setValue(1 * wWidth);
+        animatedScroll.value = 1 * wWidth;
         handleScrollTo(1, false);
         setCurrentPage(1);
       }, 200);
     } else if (currentPage === 0) {
       setTimeout(() => {
-        animatedScroll.setValue(data.length * wWidth);
+        animatedScroll.value = data.length * wWidth;
         handleScrollTo(data.length, false);
         setCurrentPage(data.length);
       }, 200);
@@ -115,11 +127,11 @@ function Carousel(
       if (isDragging && pageNum >= 0 && pageNum !== currentPage) {
         if (loop) {
           if (pageNum === data.length + 1) {
-            animatedScroll.setValue(1 * viewSize.width);
+            animatedScroll.value = 1 * viewSize.width;
             handleScrollTo(1, false);
             setCurrentPage(1);
           } else if (pageNum === 0) {
-            animatedScroll.setValue(data.length * viewSize.width);
+            animatedScroll.value = data.length * viewSize.width;
             handleScrollTo(data.length, false);
             setCurrentPage(data.length);
           } else {
@@ -149,36 +161,18 @@ function Carousel(
         ref={scrollViewRef}
         style={{ flex: 1 }}
         horizontal
-        pagingEnabled
         showsHorizontalScrollIndicator={false}
+        pagingEnabled
         scrollEventThrottle={16}
+        decelerationRate="fast"
         onScrollBeginDrag={() => {
-          const pageNum = Math.floor(currentOffset.current / wWidth);
+          const pageNum = Math.floor(animatedScroll.value / wWidth);
           if (pageNum >= 0 && pageNum !== currentPage) {
             setCurrentPage(pageNum);
           }
           setDragging(true);
         }}
-        onScroll={Animated.event(
-          [
-            {
-              nativeEvent: {
-                contentOffset: {
-                  x: (x: any) =>
-                    block([
-                      set(animatedScroll, x),
-                      call(
-                        [x],
-                        // eslint-disable-next-line no-return-assign
-                        ([offsetX]) => (currentOffset.current = offsetX),
-                      ),
-                    ]),
-                },
-              },
-            },
-          ],
-          { useNativeDriver: true },
-        )}
+        onScroll={scrollHandler}
         onMomentumScrollEnd={onScrollEnd}
       >
         {loop && (

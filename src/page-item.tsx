@@ -11,7 +11,7 @@ type Props = {
   index: number;
   renderImage?: any;
   renderOverlay?: any;
-  animatedValue: Animated.Value<number>;
+  animatedValue: Animated.SharedValue<number>;
   animation?: 'parallax';
 };
 

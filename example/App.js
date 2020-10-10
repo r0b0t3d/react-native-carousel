@@ -44,6 +44,7 @@ export default function App() {
           loop
           autoPlay
           duration={3000}
+          animation="parallax"
           renderImage={(item) => {
             return <Image
               style={{

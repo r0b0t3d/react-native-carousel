@@ -3,15 +3,13 @@
   "title": "React Native Carousel",
   "version": "1.0.8",
   "description": "",
-  "main": "lib/index.js",
+  "main": "src/index.ts",
   "scripts": {
     "deploy": "cp -R lib example/node_modules/@r0b0t3d/react-native-carousel",
-    "build": "rm -rf lib && tsc",
     "format": "prettier --write \"src/**/*.ts\" \"src/**/*.js\"",
     "lint": "eslint src/**/*.ts",
     "fix-code": "prettier-eslint --write 'src/**/*.{ts,tsx}' ",
     "test": "jest --config jestconfig.json --passWithNoTests",
-    "prepare": "npm run build",
     "prepublishOnly": "npm test && npm run lint",
     "preversion": "npm run lint",
     "version": "npm run format && git add -A src",
@@ -52,13 +50,11 @@
     "eslint-plugin-prettier": "^3.1.1",
     "jest": "^24.9.0",
     "prettier": "^1.18.2",
-    "react": "^16.8.3",
-    "react-native": "^0.59.10",
     "react-native-reanimated": "^1.9.0",
     "ts-jest": "^24.1.0",
     "typescript": "^3.6.4"
   },
   "files": [
-    "lib/**/*"
+    "src/**/*"
   ]
 }

@@ -14,13 +14,14 @@ export type CarouselProps = {
   duration?: number;
   useIndicator?: boolean;
   indicatorContainerStyle?: StyleProp<ViewStyle>;
+  animation?: 'parallax';
   renderIndicator?: (props: { selected: boolean; index: number }) => React.ReactNode;
   renderImage?: (item: any) => React.ReactNode;
   renderOverlay?: (item: CarouselData) => React.ReactNode;
   onPageChange?: (item: CarouselData, index: number) => void;
 };
 
-export type Carousel = {
+export type CarouselRef = {
   next(): void;
   prev(): void;
 };

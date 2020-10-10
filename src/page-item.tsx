@@ -1,0 +1,63 @@
+import React from 'react';
+import { Dimensions, Image, StyleSheet, View } from 'react-native';
+import Animated from 'react-native-reanimated';
+import ParallaxContainer, { withParallax } from './animators/parrallax';
+import { CarouselData } from './types';
+
+const { width: wWidth } = Dimensions.get('window');
+
+type Props = {
+  item: CarouselData;
+  index: number;
+  renderImage?: any;
+  renderOverlay?: any;
+  animatedValue: Animated.Value<number>;
+  animation?: 'parallax';
+};
+
+export default function PageItem({ item, index, renderImage, renderOverlay, animatedValue, animation }: Props) {
+  function renderContent() {
+    if (renderImage) {
+      renderImage(item);
+    }
+    return (
+      <Image
+        source={item.source!}
+        style={{
+          ...StyleSheet.absoluteFillObject,
+          height: undefined,
+          width: undefined,
+        }}
+        resizeMode="cover"
+      />
+    );
+  }
+
+  function renderContainer() {
+    if (animation === 'parallax') {
+      return withParallax(renderContent(), {
+        animatedValue,
+        index,
+      });
+    }
+    return renderContent();
+  }
+
+  return (
+    <View
+      collapsable={false}
+      style={{
+        width: wWidth,
+        overflow: 'hidden',
+        backgroundColor: 'black',
+      }}
+    >
+      {renderContainer()}
+      {renderOverlay && (
+        <View style={StyleSheet.absoluteFill} collapsable={false}>
+          {renderOverlay(item)}
+        </View>
+      )}
+    </View>
+  );
+}

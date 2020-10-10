@@ -1,11 +1,12 @@
 /* eslint-disable no-nested-ternary */
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import React, { useState, useRef, useEffect, useCallback, useImperativeHandle, forwardRef, Ref } from 'react';
-import { View, Dimensions, StyleSheet, Image, Platform } from 'react-native';
+import { View, Dimensions } from 'react-native';
 import { useInterval } from '@r0b0t3d/react-native-hooks';
-import Animated, { block, set, call, Value, debug, interpolate } from 'react-native-reanimated';
+import Animated, { block, set, call, Value } from 'react-native-reanimated';
 import Indicator from './indicator';
-import { CarouselProps, Carousel, CarouselData } from './types';
+import { CarouselProps, CarouselRef } from './types';
+import PageItem from './page-item';
 
 const { width: wWidth } = Dimensions.get('screen');
 
@@ -22,13 +23,14 @@ function Carousel(
     autoPlay = false,
     duration = 1000,
     useIndicator = true,
+    animation,
     indicatorContainerStyle,
     renderIndicator,
     renderImage,
     renderOverlay,
     onPageChange,
   }: CarouselProps,
-  ref: Ref<Carousel>,
+  ref: Ref<CarouselRef>,
 ) {
   const animatedScroll = useAnimatedValue(0);
   const [currentPage, setCurrentPage] = useState(loop ? 1 : 0);
@@ -132,16 +134,6 @@ function Carousel(
     [currentPage, isDragging],
   );
 
-  function getInterpolate(i: number) {
-    const inputRange = [(i - 1) * wWidth, i * wWidth, (i + 1) * wWidth];
-    const outputRange = i === 0 ? [0, 0, 150] : [-300, 0, 150];
-    return animatedScroll.interpolate({
-      inputRange,
-      outputRange,
-      extrapolate: Animated.Extrapolate.CLAMP,
-    });
-  }
-
   const getCurrentPage = () => {
     if (loop) {
       if (currentPage > data.length) return 0;
@@ -192,7 +184,9 @@ function Carousel(
         {loop && (
           <PageItem
             item={data[data.length - 1]}
-            translateX={getInterpolate(0)}
+            index={0}
+            animatedValue={animatedScroll}
+            animation={animation}
             renderImage={renderImage}
             renderOverlay={renderOverlay}
           />
@@ -201,7 +195,9 @@ function Carousel(
           <PageItem
             key={item.id}
             item={item}
-            translateX={getInterpolate(i + (loop ? 1 : 0))}
+            index={i + (loop ? 1 : 0)}
+            animatedValue={animatedScroll}
+            animation={animation}
             renderImage={renderImage}
             renderOverlay={renderOverlay}
           />
@@ -209,7 +205,9 @@ function Carousel(
         {loop && (
           <PageItem
             item={data[0]}
-            translateX={getInterpolate(data.length + 1)}
+            index={data.length + 1}
+            animatedValue={animatedScroll}
+            animation={animation}
             renderImage={renderImage}
             renderOverlay={renderOverlay}
           />
@@ -228,51 +226,3 @@ function Carousel(
 }
 
 export default forwardRef(Carousel);
-
-function PageItem({
-  item,
-  translateX,
-  renderImage,
-  renderOverlay,
-}: {
-  item: CarouselData;
-  translateX: any;
-  renderImage?: any;
-  renderOverlay?: any;
-}) {
-  const animateStyle = {
-    transform: [{ translateX }],
-  };
-
-  return (
-    <View
-      collapsable={false}
-      style={{
-        width: wWidth,
-        overflow: 'hidden',
-        backgroundColor: 'black',
-      }}
-    >
-      <Animated.View style={[{ flex: 1 }, animateStyle]}>
-        {renderImage ? (
-          renderImage(item)
-        ) : (
-          <Image
-            source={item.source!}
-            style={{
-              ...StyleSheet.absoluteFillObject,
-              height: undefined,
-              width: undefined,
-            }}
-            resizeMode="cover"
-          />
-        )}
-      </Animated.View>
-      {renderOverlay && (
-        <View style={StyleSheet.absoluteFill} collapsable={false}>
-          {renderOverlay(item)}
-        </View>
-      )}
-    </View>
-  );
-}

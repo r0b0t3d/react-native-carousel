@@ -2,6 +2,12 @@
 
 ## Getting started
 
+>🎉  Reanimated 2 support 🎉 
+>
+>For someone would love to try `Reanimated 2`
+>
+>`$ yarn add @r0b0t3d/react-native-carousel@alpha`
+
 `$ npm install @r0b0t3d/react-native-carousel --save`
 
 or
@@ -22,6 +28,7 @@ import Carousel from '@r0b0t3d/react-native-carousel';
     data={data}
     loop
     autoPlay
+    animation="parallax"
     renderImage={(item) => {
         return <Image
             style={{
@@ -44,5 +51,6 @@ import Carousel from '@r0b0t3d/react-native-carousel';
 - `duration: number`: [default `1000`] duration to animate. used with `autoPlay` above
 - `indicatorContainerStyle: StyleProp<ViewStyle>`
 - `renderIndicator?: ({ selected, index }: { selected: boolean, index: number }) => React.ReactNode`: custom render for indicator
+- `animation`: predefined animation. Will be `parallax` for now
 - `renderImage?: (item: CarouselData) => React.ReactNode`: custom image render.
 - `renderOverlay?: (item: CarouselData) => React.ReactNode`: render custom overlay above image

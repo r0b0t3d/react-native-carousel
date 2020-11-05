@@ -1,7 +1,7 @@
 /* eslint-disable no-nested-ternary */
 /* eslint-disable @typescript-eslint/no-use-before-define */
-import React, { useState, useRef, useEffect, useCallback, useImperativeHandle, forwardRef, Ref } from 'react';
-import { View, Dimensions, InteractionManager } from 'react-native';
+import React, { useState, useRef, useEffect, useCallback, useImperativeHandle, forwardRef, Ref, useMemo } from 'react';
+import { View, Dimensions } from 'react-native';
 import { useInterval } from '@r0b0t3d/react-native-hooks';
 import Animated, { block, set, call, Value, useSharedValue, useAnimatedScrollHandler } from 'react-native-reanimated';
 import Indicator from './indicator';
@@ -31,6 +31,7 @@ function Carousel(
 
   const [currentPage, setCurrentPage] = useState(loop ? 1 : 0);
   const [isDragging, setDragging] = useState(false);
+  const [freeze, setFreeze] = useState(false);
 
   const scrollViewRef = useRef<any>(null);
 
@@ -42,6 +43,15 @@ function Carousel(
   useEffect(() => {
     handleScrollTo(currentPage, false);
   }, []);
+  
+  const pageItems = useMemo(() => {
+    const items = [
+      ...(loop ? [data[data.length - 1]] : []),
+      ...data,
+      ...(loop ? [data[0]] : []),
+    ]
+    return items;
+  }, [data]);
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -175,37 +185,18 @@ function Carousel(
         onScroll={scrollHandler}
         onMomentumScrollEnd={onScrollEnd}
       >
-        {loop && (
+        {pageItems.map((item, i) => (
           <PageItem
-            item={data[data.length - 1]}
-            index={0}
-            animatedValue={animatedScroll}
-            animation={animation}
-            renderImage={renderImage}
-            renderOverlay={renderOverlay}
-          />
-        )}
-        {data.map((item, i) => (
-          <PageItem
-            key={item.id}
+            key={`${item.id}-${i}`}
             item={item}
-            index={i + (loop ? 1 : 0)}
+            index={i}
             animatedValue={animatedScroll}
             animation={animation}
             renderImage={renderImage}
             renderOverlay={renderOverlay}
+            freeze={freeze}
           />
         ))}
-        {loop && (
-          <PageItem
-            item={data[0]}
-            index={data.length + 1}
-            animatedValue={animatedScroll}
-            animation={animation}
-            renderImage={renderImage}
-            renderOverlay={renderOverlay}
-          />
-        )}
       </Animated.ScrollView>
       {useIndicator && (
         <Indicator

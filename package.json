@@ -50,7 +50,7 @@
     "eslint-plugin-prettier": "^3.1.1",
     "jest": "^24.9.0",
     "prettier": "^1.18.2",
-    "react-native-reanimated": "^2.0.0-alpha.7",
+    "react-native-reanimated": "^2.0.0-alpha.8",
     "ts-jest": "^24.1.0",
     "typescript": "^3.6.4"
   },

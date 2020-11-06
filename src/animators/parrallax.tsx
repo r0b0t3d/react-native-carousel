@@ -15,9 +15,14 @@ export default function ParallaxContainer({ animatedValue, index, freeze = false
   const inputRange = [(index - 1) * wWidth, index * wWidth, (index + 1) * wWidth];
   const outputRange = freeze ? [0, 0, 0] : index === 0 ? [0, 0, 150] : [-300, 0, 150];
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: interpolate(animatedValue.value, inputRange, outputRange, Animated.Extrapolate.CLAMP) }],
-  }));
+  const animatedStyle = useAnimatedStyle(
+    () => ({
+      transform: [
+        { translateX: interpolate(animatedValue.value, inputRange, outputRange, Animated.Extrapolate.CLAMP) },
+      ],
+    }),
+    [freeze],
+  );
   return <Animated.View style={[{ flex: 1 }, animatedStyle]}>{children}</Animated.View>;
 }
 

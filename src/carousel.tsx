@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback, useImperativeHandle, forwardRef, Ref, useMemo } from 'react';
 import { View, Dimensions, Platform } from 'react-native';
 import { useInterval, useTimeout } from '@r0b0t3d/react-native-hooks';
-import Animated, { useSharedValue, useAnimatedScrollHandler, runOnJS, runOnUI } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedScrollHandler, runOnJS } from 'react-native-reanimated';
 import Indicator from './indicator';
 import { CarouselProps, CarouselRef } from './types';
 import PageItem from './page-item';
@@ -178,13 +178,6 @@ function Carousel(
         pagingEnabled
         scrollEventThrottle={16}
         decelerationRate="fast"
-        // onScrollBeginDrag={() => {
-        //   const pageNum = Math.floor(animatedScroll.value / wWidth);
-        //   if (pageNum >= 0 && pageNum !== currentPage) {
-        //     setCurrentPage(pageNum);
-        //   }
-        //   setDragging(true);
-        // }}
         onScroll={scrollHandler}
         onMomentumScrollEnd={onScrollEnd}
       >

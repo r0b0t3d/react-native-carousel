@@ -13,9 +13,18 @@ type Props = {
   renderOverlay?: any;
   animatedValue: Animated.Value<number>;
   animation?: 'parallax';
+  freeze?: boolean;
 };
 
-export default function PageItem({ item, index, renderImage, renderOverlay, animatedValue, animation }: Props) {
+export default function PageItem({
+  item,
+  index,
+  renderImage,
+  renderOverlay,
+  animatedValue,
+  animation,
+  freeze = false,
+}: Props) {
   function renderContent() {
     if (renderImage) {
       renderImage(item);
@@ -38,6 +47,7 @@ export default function PageItem({ item, index, renderImage, renderOverlay, anim
       return withParallax(renderContent(), {
         animatedValue,
         index,
+        freeze,
       });
     }
     return renderContent();

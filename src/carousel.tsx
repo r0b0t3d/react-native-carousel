@@ -86,7 +86,7 @@ function Carousel(
     freeze ? 200 : -1,
   );
 
-  function jumpTo(page: number) {
+  function jumpTo(page: number, delay = 200) {
     setFreeze(true);
     setTimeout(
       () => {
@@ -94,7 +94,7 @@ function Carousel(
         handleScrollTo(page, false);
         setCurrentPage(page);
       },
-      Platform.OS === 'android' ? 200 : 0,
+      delay,
     );
   }
 
@@ -140,13 +140,13 @@ function Carousel(
       const viewSize = e.nativeEvent.layoutMeasurement;
       // Divide the horizontal offset by the width of the view to see which page is visible
       const pageNum = Math.floor(contentOffset.x / viewSize.width);
-      // Note: on iOS, scroll end event is triggered when calling `scrollTo` function
+      // Note: on iOS, scroll end event is triggered when calling `scrollTo` function     
       if (isDragging && pageNum >= 0 && pageNum !== currentPage) {
         if (loop) {
           if (pageNum === data.length + 1) {
-            jumpTo(1);
+            jumpTo(1, Platform.OS === "android" ? 200 : 0);
           } else if (pageNum === 0) {
-            jumpTo(data.length);
+            jumpTo(data.length, Platform.OS === "android" ? 200 : 0);
           } else {
             setCurrentPage(pageNum);
           }

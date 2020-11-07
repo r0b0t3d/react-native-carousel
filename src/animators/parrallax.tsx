@@ -13,7 +13,7 @@ type Props = {
 
 export default function ParallaxContainer({ animatedValue, index, freeze = false, children }: Props) {
   const inputRange = [(index - 1) * wWidth, index * wWidth, (index + 1) * wWidth];
-  const outputRange = freeze ? [0, 0, 0] : index === 0 ? [0, 0, 150] : [-300, 0, 150];
+  const outputRange = freeze ? [0, 0, 0] : [-wWidth / 2, 0, wWidth / 4];
 
   const animatedStyle = useAnimatedStyle(
     () => ({

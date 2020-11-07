@@ -49,14 +49,6 @@ function Carousel(
     return items;
   }, [data]);
 
-  function beginDrag() {
-    const pageNum = Math.floor(animatedScroll.value / wWidth);
-    if (pageNum >= 0 && pageNum !== currentPage) {
-      setCurrentPage(pageNum);
-    }
-    setDragging(true);
-  }
-
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: event => {
       animatedScroll.value = event.contentOffset.x;
@@ -86,16 +78,21 @@ function Carousel(
     freeze ? 200 : -1,
   );
 
+  function beginDrag() {
+    const pageNum = Math.round(animatedScroll.value / wWidth);
+    if (pageNum >= 0 && pageNum !== currentPage) {
+      setCurrentPage(pageNum);
+    }
+    setDragging(true);
+  }
+
   function jumpTo(page: number, delay = 200) {
     setFreeze(true);
-    setTimeout(
-      () => {
-        animatedScroll.value = page * wWidth;
-        handleScrollTo(page, false);
-        setCurrentPage(page);
-      },
-      delay,
-    );
+    setTimeout(() => {
+      animatedScroll.value = page * wWidth;
+      handleScrollTo(page, false);
+      setCurrentPage(page);
+    }, delay);
   }
 
   const goNext = () =>
@@ -139,14 +136,14 @@ function Carousel(
       const { contentOffset } = e.nativeEvent;
       const viewSize = e.nativeEvent.layoutMeasurement;
       // Divide the horizontal offset by the width of the view to see which page is visible
-      const pageNum = Math.floor(contentOffset.x / viewSize.width);
-      // Note: on iOS, scroll end event is triggered when calling `scrollTo` function     
+      const pageNum = Math.round(contentOffset.x / viewSize.width);
+      // Note: on iOS, scroll end event is triggered when calling `scrollTo` function
       if (isDragging && pageNum >= 0 && pageNum !== currentPage) {
         if (loop) {
           if (pageNum === data.length + 1) {
-            jumpTo(1, Platform.OS === "android" ? 200 : 0);
+            jumpTo(1, Platform.OS === 'android' ? 200 : 0);
           } else if (pageNum === 0) {
-            jumpTo(data.length, Platform.OS === "android" ? 200 : 0);
+            jumpTo(data.length, Platform.OS === 'android' ? 200 : 0);
           } else {
             setCurrentPage(pageNum);
           }

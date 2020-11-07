@@ -1,7 +1,7 @@
 import React from 'react';
 import { Dimensions, Image, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
-import ParallaxContainer, { withParallax } from './animators/parrallax';
+import { withParallax } from './animators/parrallax';
 import { CarouselData } from './types';
 
 const { width: wWidth } = Dimensions.get('window');
@@ -47,7 +47,7 @@ export default function PageItem({
       return withParallax(renderContent(), {
         animatedValue,
         index,
-        freeze
+        freeze,
       });
     }
     return renderContent();

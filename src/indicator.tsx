@@ -39,7 +39,7 @@ export default function Indicator({
   currentPage: number;
   style: StyleProp<ViewStyle>;
   renderIndicator?: any;
-}) {  
+}) {
   const indicators: any[] = [];
   for (let i = 0; i < totalPage; i += 1) {
     let indicator: any = null;

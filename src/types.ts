@@ -1,4 +1,4 @@
-import { StyleProp, ViewStyle, ImageSourcePropType } from 'react-native';
+import type { StyleProp, ViewStyle, ImageSourcePropType } from 'react-native';
 
 export type CarouselData = {
   id: string;
@@ -15,7 +15,11 @@ export type CarouselProps = {
   useIndicator?: boolean;
   indicatorContainerStyle?: StyleProp<ViewStyle>;
   animation?: 'parallax';
-  renderIndicator?: (props: { selected: boolean; index: number }) => React.ReactNode;
+  sliderWidth?: number;
+  renderIndicator?: (props: {
+    selected: boolean;
+    index: number;
+  }) => React.ReactNode;
   renderImage?: (item: any) => React.ReactNode;
   renderOverlay?: (item: CarouselData) => React.ReactNode;
   onPageChange?: (item: CarouselData, index: number) => void;

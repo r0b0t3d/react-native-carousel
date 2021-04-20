@@ -1,8 +1,8 @@
 import React from 'react';
 import { Dimensions, Image, StyleSheet, View } from 'react-native';
 import type Animated from 'react-native-reanimated';
-import { withParallax } from './animators/parrallax';
-import type { CarouselData } from './types';
+import { withParallax } from '../animators/parrallax';
+import type { CarouselData } from '../types';
 
 const { width: wWidth } = Dimensions.get('window');
 

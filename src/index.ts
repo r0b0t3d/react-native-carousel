@@ -1,6 +1,6 @@
-import Carousel from './carousel';
+import Carousel from './components/Carousel';
 
 export * from './types';
-export * from './carousel';
+export * from './components/Carousel';
 
 export default Carousel;

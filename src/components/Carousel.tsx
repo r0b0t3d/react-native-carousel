@@ -16,9 +16,9 @@ import Animated, {
   runOnJS,
   useAnimatedProps,
 } from 'react-native-reanimated';
-import Indicator from './indicator';
-import type { CarouselProps, CarouselRef } from './types';
-import PageItem from './page-item';
+import Indicator from './Indicator';
+import type { CarouselProps, CarouselRef } from '../types';
+import PageItem from './PageItem';
 
 const { width: wWidth } = Dimensions.get('screen');
 

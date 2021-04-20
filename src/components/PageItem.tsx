@@ -1,10 +1,8 @@
 import React from 'react';
-import { Dimensions, Image, StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import type Animated from 'react-native-reanimated';
 import { withParallax } from '../animators/parrallax';
 import type { CarouselData } from '../types';
-
-const { width: wWidth } = Dimensions.get('window');
 
 type Props = {
   item: CarouselData;
@@ -14,6 +12,7 @@ type Props = {
   animatedValue: Animated.SharedValue<number>;
   animation?: 'parallax';
   freeze: Animated.SharedValue<boolean>;
+  itemWidth: number;
 };
 
 export default function PageItem({
@@ -24,6 +23,7 @@ export default function PageItem({
   animatedValue,
   animation,
   freeze,
+  itemWidth,
 }: Props) {
   function renderContent() {
     if (renderImage) {
@@ -57,7 +57,7 @@ export default function PageItem({
     <View
       collapsable={false}
       style={{
-        width: wWidth,
+        width: itemWidth,
         overflow: 'hidden',
         backgroundColor: 'black',
       }}

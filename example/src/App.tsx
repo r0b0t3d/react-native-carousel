@@ -9,7 +9,7 @@
  */
 
 import React from 'react';
-import { StyleSheet, View, Image } from 'react-native';
+import { StyleSheet, View, Image, Dimensions } from 'react-native';
 import Carousel from '@r0b0t3d/react-native-carousel';
 
 const data = [
@@ -58,16 +58,18 @@ const data = [
   },
 ];
 
+const { width } = Dimensions.get('window');
+
 export default function App() {
   return (
     <View style={styles.container}>
       <Carousel
         style={{ height: 200 }}
         data={data}
-        loop
-        autoPlay
+        loop={false}
+        autoPlay={false}
         duration={3000}
-        animation="parallax"
+        itemWidth={width - 50}
         renderImage={(item) => {
           return (
             <Image

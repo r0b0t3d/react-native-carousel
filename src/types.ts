@@ -16,6 +16,8 @@ export type CarouselProps = {
   indicatorContainerStyle?: StyleProp<ViewStyle>;
   animation?: 'parallax';
   sliderWidth?: number;
+  itemWidth?: number;
+  firstItemAlignment?: 'start' | 'center'
   renderIndicator?: (props: {
     selected: boolean;
     index: number;

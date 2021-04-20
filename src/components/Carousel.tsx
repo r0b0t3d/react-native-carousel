@@ -8,7 +8,7 @@ import React, {
   Ref,
   useMemo,
 } from 'react';
-import { View, Dimensions, StyleSheet } from 'react-native';
+import { View, Dimensions, StyleSheet, Platform } from 'react-native';
 import { useInterval } from '@r0b0t3d/react-native-hooks';
 import Animated, {
   useSharedValue,
@@ -32,6 +32,8 @@ function Carousel(
     useIndicator = true,
     animation,
     sliderWidth = wWidth,
+    itemWidth = wWidth,
+    firstItemAlignment = 'center',
     indicatorContainerStyle,
     renderIndicator,
     renderImage,
@@ -64,9 +66,8 @@ function Carousel(
 
   const refreshPage = useCallback(
     (e) => {
-      const viewSize = e.layoutMeasurement;
       // Divide the horizontal offset by the width of the view to see which page is visible
-      const page = e.contentOffset.x / viewSize.width;
+      const page = e.contentOffset.x / itemWidth;
       const leftPage = Math.round(page);
       const rightPage = leftPage + 1;
       const diff = 0.2;
@@ -76,6 +77,7 @@ function Carousel(
       } else if (rightPage - page <= diff) {
         pageNum = rightPage;
       }
+      console.log('refreshPage', pageNum, currentPage);
       if (pageNum !== currentPage) {
         if (expectedPosition.current === pageNum) {
           freeze.value = false;
@@ -100,6 +102,8 @@ function Carousel(
 
   const handleScrollTo = useCallback(
     (page: number, animated = true) => {
+      console.log('handleScrollTo', page);
+
       const to = page * sliderWidth;
       if (getRef()) {
         getRef().scrollTo({ x: to, y: 0, animated });
@@ -109,10 +113,12 @@ function Carousel(
   );
 
   useEffect(() => {
-    setTimeout(() => {
-      handleScrollTo(currentPage, false);
-      freeze.value = false;
-    });
+    if (currentPage !== 0) {
+      setTimeout(() => {
+        handleScrollTo(currentPage, false);
+        freeze.value = false;
+      });
+    }
   }, []);
 
   const jumpTo = useCallback(
@@ -199,11 +205,28 @@ function Carousel(
         style={styles.container}
         horizontal
         showsHorizontalScrollIndicator={false}
-        pagingEnabled
-        scrollEventThrottle={16}
+        snapToInterval={itemWidth}
+        snapToAlignment={'center'}
         decelerationRate="fast"
+        scrollEventThrottle={16}
         onScroll={scrollHandler}
         bounces={false}
+        // iOS ONLY
+        contentInset={
+          firstItemAlignment === 'center'
+            ? {
+                top: 0,
+                left: (sliderWidth - itemWidth) / 2, // Left spacing for the very first card
+                bottom: 0,
+                right: (sliderWidth - itemWidth) / 2, // Right spacing for the very last card
+              }
+            : {}
+        }
+        contentContainerStyle={{
+          // contentInset alternative for Android
+          paddingHorizontal:
+            Platform.OS === 'android' ? (sliderWidth - itemWidth) / 2 : 0, // Horizontal spacing before and after the ScrollView
+        }}
         {...{ scrollViewProps }}
       >
         {pageItems.map((item, i) => (
@@ -211,6 +234,7 @@ function Carousel(
             key={`${item.id}-${i}`}
             item={item}
             index={i}
+            itemWidth={itemWidth}
             animatedValue={animatedScroll}
             animation={animation}
             renderImage={renderImage}

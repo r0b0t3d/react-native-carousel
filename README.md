@@ -2,12 +2,6 @@
 
 ## Getting started
 
->🎉  Reanimated 2 support 🎉 
->
->For someone would love to try `Reanimated 2`
->
->`$ yarn add @r0b0t3d/react-native-carousel@alpha`
-
 `$ npm install @r0b0t3d/react-native-carousel --save`
 
 or
@@ -18,7 +12,8 @@ Note: Currently, I am using `react-native-reanimated` for animation. So you shou
 
 `$ yarn add react-native-reanimated`
 
-
+## Breaking changes
+Version 2.0.0 requires `react-native-reanimated@2.1.0`
 ## Usage
 ```javascript
 import Carousel from '@r0b0t3d/react-native-carousel';
@@ -54,3 +49,11 @@ import Carousel from '@r0b0t3d/react-native-carousel';
 - `animation`: predefined animation. Will be `parallax` for now
 - `renderImage?: (item: CarouselData) => React.ReactNode`: custom image render.
 - `renderOverlay?: (item: CarouselData) => React.ReactNode`: render custom overlay above image
+
+## Contributing
+
+See the [contributing guide](CONTRIBUTING.md) to learn how to contribute to the repository and the development workflow.
+
+## License
+
+MIT

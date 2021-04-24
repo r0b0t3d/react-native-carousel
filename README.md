@@ -77,6 +77,7 @@ import Carousel from '@r0b0t3d/react-native-carousel';
 |animation?| predefined animation. Will be `parallax` for now||
 |sliderWidth?| define slider width | screen's width |
 |itemWidth?| define item width | screen's width |
+|firstItemAlignment?| `'center' | 'start'`<br> align first item | center |
 |useIndicator?| use built-in indicator component | true |
 |inactiveOpacity?| [0 - 1] define opacity for inactive items | 1 |
 |inactiveScale?| [0 - 1] define scale value for inactive items | 1 |

@@ -67,9 +67,13 @@ export default function App() {
         style={{ height: 200 }}
         data={data}
         loop={false}
-        autoPlay={false}
+        autoPlay={true}
         duration={3000}
-        itemWidth={width - 50}
+        itemWidth={width - 100}
+        inactiveOpacity={0.5}
+        inactiveScale={0.9}
+        firstItemAlignment="start"
+        spaceBetween={20}
         renderImage={(item) => {
           return (
             <Image

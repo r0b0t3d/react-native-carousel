@@ -1,4 +1,5 @@
 import type { StyleProp, ViewStyle, ImageSourcePropType } from 'react-native';
+import type Animated from 'react-native-reanimated';
 
 export type CarouselData = {
   id: string;
@@ -17,7 +18,10 @@ export type CarouselProps = {
   animation?: 'parallax';
   sliderWidth?: number;
   itemWidth?: number;
-  firstItemAlignment?: 'start' | 'center'
+  firstItemAlignment?: 'start' | 'center';
+  inactiveOpacity?: number;
+  inactiveScale?: number;
+  spaceBetween?: number;
   renderIndicator?: (props: {
     selected: boolean;
     index: number;
@@ -30,4 +34,11 @@ export type CarouselProps = {
 export type CarouselRef = {
   next(): void;
   prev(): void;
+};
+
+export type AnimatorProps = {
+  animatedValue: Animated.SharedValue<number>;
+  offset: number;
+  freeze: Animated.SharedValue<boolean>;
+  itemWidth: number;
 };

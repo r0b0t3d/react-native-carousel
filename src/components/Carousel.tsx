@@ -8,7 +8,7 @@ import React, {
   Ref,
   useMemo,
 } from 'react';
-import { View, Dimensions, StyleSheet } from 'react-native';
+import { View, Dimensions, StyleSheet, Platform } from 'react-native';
 import { useInterval } from '@r0b0t3d/react-native-hooks';
 import Animated, {
   useSharedValue,
@@ -19,6 +19,8 @@ import Animated, {
 import Indicator from './Indicator';
 import type { CarouselProps, CarouselRef } from '../types';
 import PageItem from './PageItem';
+import { findNearestPage, generateOffsets } from '../utils';
+import type { CarouselData } from 'lib/typescript';
 
 const { width: wWidth } = Dimensions.get('screen');
 
@@ -29,9 +31,14 @@ function Carousel(
     loop = false,
     autoPlay = false,
     duration = 1000,
-    useIndicator = true,
     animation,
     sliderWidth = wWidth,
+    itemWidth = wWidth,
+    firstItemAlignment = 'center',
+    inactiveOpacity = 1,
+    inactiveScale = 1,
+    spaceBetween = 0,
+    useIndicator = true,
     indicatorContainerStyle,
     renderIndicator,
     renderImage,
@@ -43,8 +50,12 @@ function Carousel(
   const [currentPage, setCurrentPage] = useState(loop ? 1 : 0);
   const [isDragging, setDragging] = useState(false);
   const animatedScroll = useSharedValue(currentPage * sliderWidth);
-  const freeze = useSharedValue(true);
+  const freeze = useSharedValue(loop);
   const expectedPosition = useRef(-1);
+  const horizontalPadding = useMemo(() => (sliderWidth - itemWidth) / 2, [
+    sliderWidth,
+    itemWidth,
+  ]);
 
   const scrollViewRef = useRef<any>(null);
 
@@ -52,6 +63,15 @@ function Carousel(
     next: goNext,
     prev: goPrev,
   }));
+
+  const offsets = useMemo(() => {
+    return generateOffsets({
+      sliderWidth,
+      itemWidth,
+      itemCount: data.length + (loop ? 2 : 0),
+      firstItemAlignment: loop ? 'center' : firstItemAlignment,
+    });
+  }, [sliderWidth, itemWidth, data, firstItemAlignment, loop]);
 
   const pageItems = useMemo(() => {
     const items = [
@@ -63,32 +83,21 @@ function Carousel(
   }, [data, loop]);
 
   const refreshPage = useCallback(
-    (e) => {
-      const viewSize = e.layoutMeasurement;
-      // Divide the horizontal offset by the width of the view to see which page is visible
-      const page = e.contentOffset.x / viewSize.width;
-      const leftPage = Math.round(page);
-      const rightPage = leftPage + 1;
-      const diff = 0.2;
-      let pageNum = currentPage;
-      if (page - leftPage <= diff) {
-        pageNum = leftPage;
-      } else if (rightPage - page <= diff) {
-        pageNum = rightPage;
+    (offset) => {
+      'worklet';
+      const pageNum = findNearestPage(offset, offsets, 20);
+      if (pageNum === -1) {
+        return;
       }
       if (pageNum !== currentPage) {
         if (expectedPosition.current === pageNum) {
           freeze.value = false;
         }
-        setCurrentPage(pageNum);
+        runOnJS(setCurrentPage)(pageNum);
       }
     },
-    [currentPage, isDragging]
+    [currentPage, isDragging, offsets]
   );
-
-  const beginDrag = useCallback(() => {
-    setDragging(true);
-  }, []);
 
   const getRef = useCallback(() => {
     if (!scrollViewRef.current) return;
@@ -100,31 +109,34 @@ function Carousel(
 
   const handleScrollTo = useCallback(
     (page: number, animated = true) => {
-      const to = page * sliderWidth;
       if (getRef()) {
-        getRef().scrollTo({ x: to, y: 0, animated });
+        getRef().scrollTo({ x: offsets[page], y: 0, animated });
       }
     },
-    [getRef, sliderWidth]
+    [getRef, offsets]
   );
 
   useEffect(() => {
-    setTimeout(() => {
-      handleScrollTo(currentPage, false);
-      freeze.value = false;
-    });
+    if (currentPage !== 0) {
+      setTimeout(() => {
+        handleScrollTo(currentPage, false);
+        freeze.value = false;
+      });
+    }
   }, []);
 
   const jumpTo = useCallback(
     (page: number, delay = 200) => {
       expectedPosition.current = page;
-      freeze.value = true;
+      if (Platform.OS === 'android') {
+        freeze.value = true;
+      }
       setTimeout(() => {
-        animatedScroll.value = page * sliderWidth;
+        animatedScroll.value = offsets[page];
         handleScrollTo(page, false);
       }, delay);
     },
-    [handleScrollTo, animatedScroll, freeze, sliderWidth]
+    [handleScrollTo, animatedScroll, freeze]
   );
 
   const getCurrentPage = useMemo(() => {
@@ -163,8 +175,12 @@ function Carousel(
     () => {
       goNext();
     },
-    !autoPlay || isDragging ? -1 : duration
+    !autoPlay || !loop || isDragging ? -1 : duration
   );
+
+  const beginDrag = useCallback(() => {
+    setDragging(true);
+  }, []);
 
   const endDrag = useCallback(() => {
     setTimeout(() => setDragging(false), 200);
@@ -174,7 +190,7 @@ function Carousel(
     {
       onScroll: (event) => {
         animatedScroll.value = event.contentOffset.x;
-        runOnJS(refreshPage)(event);
+        refreshPage(animatedScroll.value);
       },
       onBeginDrag: (_e) => {
         runOnJS(beginDrag)();
@@ -192,32 +208,61 @@ function Carousel(
     };
   }, []);
 
+  function renderPage(item: CarouselData, i: number) {
+    const containerStyle = useMemo(() => {
+      if (firstItemAlignment === 'start') {
+        return {
+          paddingLeft: i === 0 ? 0 : spaceBetween / 2,
+          paddingRight: i === data.length - 1 ? 0 : spaceBetween / 2,
+        };
+      }
+      return {
+        paddingLeft: spaceBetween / 2,
+        paddingRight: spaceBetween / 2,
+      };
+    }, [spaceBetween, firstItemAlignment]);
+
+    return (
+      <PageItem
+        key={`${item.id}-${i}`}
+        containerStyle={containerStyle}
+        item={item}
+        offset={offsets[i]}
+        itemWidth={itemWidth}
+        animatedValue={animatedScroll}
+        animation={animation}
+        renderImage={renderImage}
+        renderOverlay={renderOverlay}
+        freeze={freeze}
+        inactiveOpacity={inactiveOpacity}
+        inactiveScale={inactiveScale}
+      />
+    );
+  }
+
   return (
     <View style={[style]}>
       <Animated.ScrollView
         ref={scrollViewRef}
         style={styles.container}
         horizontal
+        disableScrollViewPanResponder
+        disableIntervalMomentum={true}
         showsHorizontalScrollIndicator={false}
-        pagingEnabled
-        scrollEventThrottle={16}
+        snapToOffsets={offsets}
+        snapToStart
+        snapToEnd
         decelerationRate="fast"
+        scrollEventThrottle={16}
         onScroll={scrollHandler}
         bounces={false}
+        contentContainerStyle={{
+          paddingHorizontal:
+            firstItemAlignment === 'center' || loop ? horizontalPadding : 0,
+        }}
         {...{ scrollViewProps }}
       >
-        {pageItems.map((item, i) => (
-          <PageItem
-            key={`${item.id}-${i}`}
-            item={item}
-            index={i}
-            animatedValue={animatedScroll}
-            animation={animation}
-            renderImage={renderImage}
-            renderOverlay={renderOverlay}
-            freeze={freeze}
-          />
-        ))}
+        {pageItems.map(renderPage)}
       </Animated.ScrollView>
       {useIndicator && (
         <Indicator

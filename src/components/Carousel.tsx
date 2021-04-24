@@ -20,7 +20,7 @@ import Indicator from './Indicator';
 import type { CarouselProps, CarouselRef } from '../types';
 import PageItem from './PageItem';
 import { findNearestPage, generateOffsets } from '../utils';
-import type { CarouselData } from 'lib/typescript';
+import type { CarouselData } from '../types';
 
 const { width: wWidth } = Dimensions.get('screen');
 

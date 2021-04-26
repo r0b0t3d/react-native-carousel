@@ -74,9 +74,10 @@ export default function App() {
         duration={3000}
         itemWidth={width - 100}
         inactiveOpacity={0.5}
-        inactiveScale={0.9}
+        inactiveScale={1}
         firstItemAlignment="center"
-        spaceBetween={20}
+        spaceBetween={50}
+        spaceHeadTail={20}
         animatedPage={currentPage}
         renderItem={(item) => {
           return (

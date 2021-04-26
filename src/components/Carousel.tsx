@@ -37,6 +37,7 @@ function Carousel(
     inactiveOpacity = 1,
     inactiveScale = 1,
     spaceBetween = 0,
+    spaceHeadTail = 0,
     renderItem,
     onPageChange,
     animatedPage = useSharedValue(0)
@@ -48,9 +49,15 @@ function Carousel(
   const animatedScroll = useSharedValue(currentPage.value * sliderWidth);
   const freeze = useSharedValue(loop);
   const expectedPosition = useRef(-1);
-  const horizontalPadding = useMemo(() => (sliderWidth - itemWidth) / 2, [
+  const horizontalPadding = useMemo(() => {
+    const padding = (sliderWidth - itemWidth) / 2
+    return firstItemAlignment === 'center' || loop ? padding : spaceHeadTail;
+  }, [
     sliderWidth,
     itemWidth,
+    firstItemAlignment,
+    loop,
+    spaceHeadTail
   ]);
 
   const scrollViewRef = useRef<any>(null);
@@ -65,9 +72,9 @@ function Carousel(
       sliderWidth,
       itemWidth,
       itemCount: data.length + (loop ? 2 : 0),
-      firstItemAlignment: loop ? 'center' : firstItemAlignment,
+      horizontalPadding,
     });
-  }, [sliderWidth, itemWidth, data, firstItemAlignment, loop]);
+  }, [sliderWidth, itemWidth, data, horizontalPadding]);
 
   const pageItems = useMemo(() => {
     const items = [
@@ -105,7 +112,7 @@ function Carousel(
   const refreshPage = useCallback(
     (offset) => {
       'worklet';
-      const pageNum = findNearestPage(offset, offsets, 20);
+      const pageNum = findNearestPage(offset, offsets, 20);     
       if (pageNum === -1) {
         return;
       }
@@ -254,8 +261,7 @@ function Carousel(
         onScroll={scrollHandler}
         bounces={false}
         contentContainerStyle={{
-          paddingHorizontal:
-            firstItemAlignment === 'center' || loop ? horizontalPadding : 0,
+          paddingHorizontal: horizontalPadding,
         }}
         {...{ scrollViewProps }}
       >

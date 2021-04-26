@@ -119,6 +119,7 @@ function MyCarousel() {
 |inactiveOpacity?| [0 - 1] define opacity for inactive items | 1 |
 |inactiveScale?| [0 - 1] define scale value for inactive items | 1 |
 |spaceBetween?| add additional space between items | 0 |
+|spaceHeadTail?| add more space in head/tail. This only work if `firstItemAlignment = 'start'` | 0 |
 |animatedPage?| animated value which is the current page. This value used to pass into `PaginationIndicator` for animation | |
 |renderItem?| `(item: CarouselData) => React.ReactNode`<br> custom image render. | |
 |onPageChange?| `(index: number) => void`<br> callback to notify when page change | |

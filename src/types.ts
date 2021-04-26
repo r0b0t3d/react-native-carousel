@@ -19,6 +19,7 @@ export type CarouselProps = {
   inactiveOpacity?: number;
   inactiveScale?: number;
   spaceBetween?: number;
+  spaceHeadTail?: number;
   animatedPage?: Animated.SharedValue<number>;
   renderItem?: (item: any) => React.ReactNode;
   onPageChange?: (index: number) => void;

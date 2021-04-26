@@ -2,23 +2,22 @@ export const generateOffsets = ({
   sliderWidth,
   itemWidth,
   itemCount,
-  firstItemAlignment,
+  horizontalPadding,
 }: {
   sliderWidth: number;
   itemWidth: number;
   itemCount: number;
-  firstItemAlignment: 'start' | 'center';
-}) => {  
-  const horizontalPadding = (sliderWidth - itemWidth) / 2;
-  const extraPadding = firstItemAlignment === 'start' ? horizontalPadding : 0;
+  horizontalPadding: number;
+}) => {
+  const padding = (sliderWidth - itemWidth) / 2;
   const result: number[] = [];
   for (let i = 0; i < itemCount; i++) {
     if (i === 0) {
       result.push(0);
     } else if (i === itemCount - 1) {
-      result.push(i * itemWidth - 2 * extraPadding);
+      result.push(i * itemWidth + 2 * (horizontalPadding - padding));
     } else {
-      result.push(i * itemWidth - extraPadding);
+      result.push(i * itemWidth + horizontalPadding - padding);
     }
   }
   return result;
@@ -29,7 +28,7 @@ export const findNearestPage = (
   offsets: number[],
   delta: number
 ) => {
-  'worklet'
+  'worklet';
   let mid;
   let lo = 0;
   let hi = offsets.length - 1;

@@ -67,7 +67,7 @@ export default function PageItem({
 
   function renderContent() {
     if (renderItem) {
-      renderItem(item);
+      return renderItem(item);
     }
     if (item.source) {
       return (

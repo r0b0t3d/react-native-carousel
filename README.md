@@ -93,6 +93,7 @@ function MyCarousel() {
         activeIndicatorStyle={{
           width: 20,
           height: 10,
+          borderRadius: 5,
         }}
         indicatorConfigs={{
           spaceBetween: 10

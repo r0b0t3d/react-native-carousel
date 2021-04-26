@@ -5,7 +5,7 @@ import Animated, {
   useDerivedValue,
   withSpring,
 } from 'react-native-reanimated';
-import type { PaginationProps } from 'src/types';
+import type { PaginationProps } from '../types';
 
 const defaultIndicatorConfigs = {
   indicatorColor: 'gray',

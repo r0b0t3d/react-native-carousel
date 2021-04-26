@@ -21,7 +21,6 @@ export type CarouselProps = {
   spaceBetween?: number;
   animatedPage?: Animated.SharedValue<number>;
   renderItem?: (item: any) => React.ReactNode;
-  renderOverlay?: (item: CarouselData) => React.ReactNode;
   onPageChange?: (index: number) => void;
 };
 

@@ -69,13 +69,13 @@ export default function App() {
       <Carousel
         style={{ height: 200 }}
         data={data}
-        loop={false}
-        autoPlay={true}
+        loop={true}
+        autoPlay={false}
         duration={3000}
         itemWidth={width - 100}
         inactiveOpacity={0.5}
         inactiveScale={0.9}
-        firstItemAlignment="start"
+        firstItemAlignment="center"
         spaceBetween={20}
         animatedPage={currentPage}
         renderItem={(item) => {
@@ -98,6 +98,7 @@ export default function App() {
           activeIndicatorStyle={{
             width: 20,
             height: 10,
+            borderRadius: 5,
           }}
           indicatorConfigs={{
             spaceBetween: 10

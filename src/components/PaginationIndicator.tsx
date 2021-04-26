@@ -77,7 +77,11 @@ export default function PaginationIndicator({
         height: configs.indicatorWidth,
         marginEnd: configs.spaceBetween,
       },
-      activeIndicatorStyle
+      activeIndicatorStyle,
+      {
+        // Disable backgroundColor in activeIndicatorStyle
+        backgroundColor: undefined
+      }
     ]);
     const dotStyle: ViewStyle = StyleSheet.flatten([
       {
@@ -88,6 +92,7 @@ export default function PaginationIndicator({
       },
       indicatorStyle,
     ]);
+
     const aStyle = useAnimatedStyle(() => {
       return {
         width: withSpring(

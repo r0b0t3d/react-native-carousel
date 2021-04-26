@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import React from 'react';
+import React, { ReactNode } from 'react';
 import { Image, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import Animated, {
   interpolate,
@@ -10,8 +10,7 @@ import type { CarouselData } from '../types';
 type Props = {
   item: CarouselData;
   offset: number;
-  renderImage?: any;
-  renderOverlay?: any;
+  renderItem?: (item: CarouselData) => ReactNode;
   animatedValue: Animated.SharedValue<number>;
   animation?: 'parallax';
   freeze: Animated.SharedValue<boolean>;
@@ -24,8 +23,7 @@ type Props = {
 export default function PageItem({
   item,
   offset,
-  renderImage,
-  renderOverlay,
+  renderItem,
   animatedValue,
   animation,
   freeze,
@@ -68,20 +66,24 @@ export default function PageItem({
   }, [inactiveScale, inactiveOpacity, animation, itemWidth, offset]);
 
   function renderContent() {
-    if (renderImage) {
-      renderImage(item);
+    if (renderItem) {
+      renderItem(item);
     }
-    return (
-      <Image
-        source={item.source!}
-        style={{
-          ...StyleSheet.absoluteFillObject,
-          height: undefined,
-          width: undefined,
-        }}
-        resizeMode="cover"
-      />
-    );
+    if (item.source) {
+      return (
+        <Image
+          source={item.source}
+          style={{
+            ...StyleSheet.absoluteFillObject,
+            height: undefined,
+            width: undefined,
+          }}
+          resizeMode="cover"
+        />
+      );
+    }
+    console.error('You need implement renderItem');
+    return null;
   }
 
   return (
@@ -98,11 +100,6 @@ export default function PageItem({
       <Animated.View style={[{ flex: 1 }, animatedStyle]}>
         {renderContent()}
       </Animated.View>
-      {renderOverlay && (
-        <View style={StyleSheet.absoluteFill} collapsable={false}>
-          {renderOverlay(item)}
-        </View>
-      )}
     </View>
   );
 }

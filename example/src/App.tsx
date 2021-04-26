@@ -10,7 +10,8 @@
 
 import React from 'react';
 import { StyleSheet, View, Image, Dimensions } from 'react-native';
-import Carousel from '@r0b0t3d/react-native-carousel';
+import Carousel, { PaginationIndicator } from '@r0b0t3d/react-native-carousel';
+import { useSharedValue } from 'react-native-reanimated';
 
 const data = [
   {
@@ -61,6 +62,8 @@ const data = [
 const { width } = Dimensions.get('window');
 
 export default function App() {
+  const currentPage = useSharedValue(0);
+
   return (
     <View style={styles.container}>
       <Carousel
@@ -74,7 +77,8 @@ export default function App() {
         inactiveScale={0.9}
         firstItemAlignment="start"
         spaceBetween={20}
-        renderImage={(item) => {
+        animatedPage={currentPage}
+        renderItem={(item) => {
           return (
             <Image
               style={{
@@ -86,6 +90,20 @@ export default function App() {
           );
         }}
       />
+      <View>
+        <PaginationIndicator
+          totalPage={data.length}
+          currentPage={currentPage}
+          containerStyle={{ marginTop: 20 }}
+          activeIndicatorStyle={{
+            width: 20,
+            height: 10,
+          }}
+          indicatorConfigs={{
+            spaceBetween: 10
+          }}
+        />
+      </View>
     </View>
   );
 }

@@ -9,7 +9,16 @@ Note: Currently, I am using `react-native-reanimated` for animation. So you shou
 `$ yarn add react-native-reanimated`
 
 ## Breaking changes
-Version 2.0.0 requires `react-native-reanimated@2.1.0`
+ ### v3.0.0
+  - Added: 
+    - `animatedPage`: animated value used which is current selected page. Used to pass into the `PaginationIndicator` for animation.
+  - Removed:
+    - `useIndicator`, `indicatorContainerStyle`, `renderIndicator`, . Used `PaginationIndicator` instead
+    - `renderOverlay`: you can render overlay inside `renderItem` function
+  - Changed: 
+    - `renderImage` -> `renderItem`
+ ### v2.0.0
+  - requires `react-native-reanimated@2.1.0`
 
 ## Show cases
 
@@ -48,29 +57,57 @@ Version 2.0.0 requires `react-native-reanimated@2.1.0`
 ```javascript
 import Carousel from '@r0b0t3d/react-native-carousel';
 
-<Carousel
-    style={{ height: 200 }}
-    data={data}
-    loop
-    autoPlay
-    animation="parallax"
-    renderImage={(item) => {
-        return <Image
+function MyCarousel() {
+  const currentPage = useSharedValue(0);
+  return (
+    <View>
+    <Carousel
+      style={{ height: 200 }}
+      data={data}
+      loop={false}
+      autoPlay={true}
+      duration={3000}
+      itemWidth={width - 100}
+      inactiveOpacity={0.5}
+      inactiveScale={0.9}
+      firstItemAlignment="start"
+      spaceBetween={20}
+      animatedPage={currentPage}
+      renderItem={(item) => {
+        return (
+          <Image
             style={{
-                flex: 1,
-                backgroundColor: 'red',
+              flex: 1,
+              backgroundColor: 'red',
             }}
             source={{ uri: item.url }}
-        />
-    }}
-/>
+          />
+        );
+      }}
+    />
+    <View>
+      <PaginationIndicator
+        totalPage={data.length}
+        currentPage={currentPage}
+        containerStyle={{ marginTop: 20 }}
+        activeIndicatorStyle={{
+          width: 20,
+          height: 10,
+        }}
+        indicatorConfigs={{
+          spaceBetween: 10
+        }}
+      />
+    </View>
+  </View>
+}
 ```
 
 ## Properties
 
 | Props | Description | Default |
 | ----- | ----------- |:-------:|
-| data | array of item to be rendered.<br>- `id: string`: this will be used as key to render<br>- `source: ImageSourcePropType`: optional. Image source. If you don't want to pass `source` here. You could use `renderImage` below to render your custom image.|
+| data | array of item to be rendered.<br>- `id: string`: this will be used as key to render<br>- `source: ImageSourcePropType`: optional. Image source. If you don't want to pass `source` here. You could use `renderItem` below to render your custom image.|
 |loop?| Whether your carousel can loop or not | false |
 |autoPlay?| Auto animate to next image with `duration`.| false|
 |duration?| duration to animate. used with `autoPlay` above|1000|
@@ -78,15 +115,12 @@ import Carousel from '@r0b0t3d/react-native-carousel';
 |sliderWidth?| define slider width | screen's width |
 |itemWidth?| define item width | screen's width |
 |firstItemAlignment?| `'center' | 'start'`<br> align first item | center |
-|useIndicator?| use built-in indicator component | true |
 |inactiveOpacity?| [0 - 1] define opacity for inactive items | 1 |
 |inactiveScale?| [0 - 1] define scale value for inactive items | 1 |
 |spaceBetween?| add additional space between items | 0 |
-|indicatorContainerStyle?| style for indication container | |
-|renderIndicator?| `({ selected, index }: { selected: boolean, index: number }) => React.ReactNode`<br> custom render for indicator | |
-|renderImage?| `(item: CarouselData) => React.ReactNode`<br> custom image render. | |
-|renderOverlay?| `(item: CarouselData) => React.ReactNode`<br> render custom overlay above image | |
-|onPageChange?| `(item: CarouselData, index: number) => void`<br> callback to notify when page change | |
+|animatedPage?| animated value which is the current page. This value used to pass into `PaginationIndicator` for animation | |
+|renderItem?| `(item: CarouselData) => React.ReactNode`<br> custom image render. | |
+|onPageChange?| `(index: number) => void`<br> callback to notify when page change | |
 
 ## Contributing
 

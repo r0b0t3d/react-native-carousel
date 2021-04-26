@@ -16,7 +16,6 @@ import Animated, {
   runOnJS,
   useAnimatedProps,
 } from 'react-native-reanimated';
-import Indicator from './Indicator';
 import type { CarouselProps, CarouselRef } from '../types';
 import PageItem from './PageItem';
 import { findNearestPage, generateOffsets } from '../utils';
@@ -38,18 +37,15 @@ function Carousel(
     inactiveOpacity = 1,
     inactiveScale = 1,
     spaceBetween = 0,
-    useIndicator = true,
-    indicatorContainerStyle,
-    renderIndicator,
-    renderImage,
-    renderOverlay,
+    renderItem,
     onPageChange,
+    animatedPage = useSharedValue(0)
   }: CarouselProps,
   ref: Ref<CarouselRef>
 ) {
-  const [currentPage, setCurrentPage] = useState(loop ? 1 : 0);
+  const currentPage = useSharedValue(loop ? 1 : 0);
   const [isDragging, setDragging] = useState(false);
-  const animatedScroll = useSharedValue(currentPage * sliderWidth);
+  const animatedScroll = useSharedValue(currentPage.value * sliderWidth);
   const freeze = useSharedValue(loop);
   const expectedPosition = useRef(-1);
   const horizontalPadding = useMemo(() => (sliderWidth - itemWidth) / 2, [
@@ -82,6 +78,30 @@ function Carousel(
     return items;
   }, [data, loop]);
 
+  const getActualPage = useCallback((page: number) => {
+    if (loop) {
+      if (page > data.length) return 0;
+      if (page === 0) return data.length - 1;
+      return page - 1;
+    }
+    return page;
+  }, [loop, data]);
+
+  const handlePageChange = useCallback((page: number) => {
+    const actualPage = getActualPage(page);
+    animatedPage.value = actualPage;
+    if (onPageChange) {
+      onPageChange(actualPage);
+    }
+    currentPage.value = page;
+    if (!loop) return;
+    if (page === data.length + 1) {
+      jumpTo(1);
+    } else if (page === 0) {
+      jumpTo(data.length);
+    }
+  }, [onPageChange, loop])
+
   const refreshPage = useCallback(
     (offset) => {
       'worklet';
@@ -89,14 +109,14 @@ function Carousel(
       if (pageNum === -1) {
         return;
       }
-      if (pageNum !== currentPage) {
+      if (pageNum !== currentPage.value) {
         if (expectedPosition.current === pageNum) {
           freeze.value = false;
         }
-        runOnJS(setCurrentPage)(pageNum);
+        runOnJS(handlePageChange)(pageNum);
       }
     },
-    [currentPage, isDragging, offsets]
+    [isDragging, offsets, handlePageChange]
   );
 
   const getRef = useCallback(() => {
@@ -117,9 +137,9 @@ function Carousel(
   );
 
   useEffect(() => {
-    if (currentPage !== 0) {
+    if (currentPage.value !== 0) {
       setTimeout(() => {
-        handleScrollTo(currentPage, false);
+        handleScrollTo(currentPage.value, false);
         freeze.value = false;
       });
     }
@@ -139,37 +159,15 @@ function Carousel(
     [handleScrollTo, animatedScroll, freeze]
   );
 
-  const getCurrentPage = useMemo(() => {
-    if (loop) {
-      if (currentPage > data.length) return 0;
-      if (currentPage === 0) return data.length - 1;
-      return currentPage - 1;
-    }
-    return currentPage;
-  }, [loop, currentPage, data]);
-
-  useEffect(() => {
-    if (onPageChange) {
-      const index = getCurrentPage;
-      onPageChange(data[index], index);
-    }
-    if (!loop) return;
-    if (currentPage === data.length + 1) {
-      jumpTo(1);
-    } else if (currentPage === 0) {
-      jumpTo(data.length);
-    }
-  }, [currentPage]);
-
   const goNext = useCallback(() => {
-    const next = currentPage + 1;
+    const next = currentPage.value + 1;
     handleScrollTo(next);
-  }, [handleScrollTo, currentPage]);
+  }, [handleScrollTo]);
 
   const goPrev = useCallback(() => {
-    const prev = currentPage - 1;
+    const prev = currentPage.value - 1;
     handleScrollTo(prev);
-  }, [handleScrollTo, currentPage]);
+  }, [handleScrollTo]);
 
   useInterval(
     () => {
@@ -199,7 +197,7 @@ function Carousel(
         runOnJS(endDrag)();
       },
     },
-    [beginDrag, endDrag, refreshPage, currentPage]
+    [beginDrag, endDrag, refreshPage]
   );
 
   const scrollViewProps = useAnimatedProps(() => {
@@ -231,8 +229,7 @@ function Carousel(
         itemWidth={itemWidth}
         animatedValue={animatedScroll}
         animation={animation}
-        renderImage={renderImage}
-        renderOverlay={renderOverlay}
+        renderItem={renderItem}
         freeze={freeze}
         inactiveOpacity={inactiveOpacity}
         inactiveScale={inactiveScale}
@@ -247,7 +244,7 @@ function Carousel(
         style={styles.container}
         horizontal
         disableScrollViewPanResponder
-        disableIntervalMomentum={true}
+        disableIntervalMomentum={false}
         showsHorizontalScrollIndicator={false}
         snapToOffsets={offsets}
         snapToStart
@@ -264,14 +261,6 @@ function Carousel(
       >
         {pageItems.map(renderPage)}
       </Animated.ScrollView>
-      {useIndicator && (
-        <Indicator
-          totalPage={data.length}
-          currentPage={getCurrentPage}
-          style={indicatorContainerStyle}
-          renderIndicator={renderIndicator}
-        />
-      )}
     </View>
   );
 }

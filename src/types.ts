@@ -1,9 +1,8 @@
-import type { StyleProp, ViewStyle, ImageSourcePropType } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 import type Animated from 'react-native-reanimated';
 
 export type CarouselData = {
   id: string;
-  source?: ImageSourcePropType;
   [key: string]: any;
 };
 
@@ -13,8 +12,6 @@ export type CarouselProps = {
   loop?: boolean;
   autoPlay?: boolean;
   duration?: number;
-  useIndicator?: boolean;
-  indicatorContainerStyle?: StyleProp<ViewStyle>;
   animation?: 'parallax';
   sliderWidth?: number;
   itemWidth?: number;
@@ -22,13 +19,10 @@ export type CarouselProps = {
   inactiveOpacity?: number;
   inactiveScale?: number;
   spaceBetween?: number;
-  renderIndicator?: (props: {
-    selected: boolean;
-    index: number;
-  }) => React.ReactNode;
-  renderImage?: (item: any) => React.ReactNode;
+  animatedPage?: Animated.SharedValue<number>;
+  renderItem?: (item: any) => React.ReactNode;
   renderOverlay?: (item: CarouselData) => React.ReactNode;
-  onPageChange?: (item: CarouselData, index: number) => void;
+  onPageChange?: (index: number) => void;
 };
 
 export type CarouselRef = {
@@ -42,3 +36,19 @@ export type AnimatorProps = {
   freeze: Animated.SharedValue<boolean>;
   itemWidth: number;
 };
+
+export type PaginationProps = {
+  totalPage: number;
+  currentPage: Animated.SharedValue<number>;
+  containerStyle?: StyleProp<ViewStyle>;
+  indicatorStyle?: StyleProp<ViewStyle>;
+  activeIndicatorStyle?: StyleProp<ViewStyle>;
+  indicatorConfigs?: IndicatorConfigs
+}
+
+export type IndicatorConfigs = {
+  indicatorColor?: string,
+  indicatorSelectedColor?: string,
+  indicatorWidth?: number,
+  spaceBetween?: number,
+}

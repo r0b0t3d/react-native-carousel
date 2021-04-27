@@ -40,7 +40,7 @@ const data = [
       'https://4.bp.blogspot.com/_N44PgSKJwQY/TOtoPtIo3_I/AAAAAAAAANE/7WwIFzgm-IU/s1600/Danboard.obstacles.jpg',
   },
   {
-    id: 'image5',
+    id: 'image4',
     source: {
       uri:
         'https://i.pinimg.com/originals/97/17/8a/97178ac9a3e25b3080a0e7f8b728ac29.jpg',
@@ -49,7 +49,7 @@ const data = [
       'https://i.pinimg.com/originals/97/17/8a/97178ac9a3e25b3080a0e7f8b728ac29.jpg',
   },
   {
-    id: 'image6',
+    id: 'image5',
     source: {
       uri:
         'https://c4.wallpaperflare.com/wallpaper/289/627/693/danbo-cardboard-robot-hat-walk-wallpaper-preview.jpg',
@@ -79,6 +79,7 @@ export default function App() {
         spaceBetween={50}
         spaceHeadTail={20}
         animatedPage={currentPage}
+        additionalPagesPerSide={3}
         renderItem={(item) => {
           return (
             <Image

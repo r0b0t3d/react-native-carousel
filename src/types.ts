@@ -10,6 +10,7 @@ export type CarouselProps = {
   style?: StyleProp<ViewStyle>;
   data: CarouselData[];
   loop?: boolean;
+  additionalPagesPerSide?: number;
   autoPlay?: boolean;
   duration?: number;
   animation?: 'parallax';

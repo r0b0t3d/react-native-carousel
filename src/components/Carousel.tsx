@@ -28,6 +28,7 @@ function Carousel(
     style,
     data,
     loop = false,
+    additionalPagesPerSide = 2,
     autoPlay = false,
     duration = 1000,
     animation,
@@ -40,25 +41,20 @@ function Carousel(
     spaceHeadTail = 0,
     renderItem,
     onPageChange,
-    animatedPage = useSharedValue(0)
+    animatedPage = useSharedValue(0),
   }: CarouselProps,
   ref: Ref<CarouselRef>
 ) {
-  const currentPage = useSharedValue(loop ? 1 : 0);
+  const currentPage = useSharedValue(loop ? additionalPagesPerSide : 0);
   const [isDragging, setDragging] = useState(false);
   const animatedScroll = useSharedValue(currentPage.value * sliderWidth);
   const freeze = useSharedValue(loop);
   const expectedPosition = useRef(-1);
   const horizontalPadding = useMemo(() => {
-    const padding = (sliderWidth - itemWidth) / 2
+    const padding = (sliderWidth - itemWidth) / 2;
     return firstItemAlignment === 'center' || loop ? padding : spaceHeadTail;
-  }, [
-    sliderWidth,
-    itemWidth,
-    firstItemAlignment,
-    loop,
-    spaceHeadTail
-  ]);
+  }, [sliderWidth, itemWidth, firstItemAlignment, loop, spaceHeadTail]);
+  const pageMapper = useRef<any>({})
 
   const scrollViewRef = useRef<any>(null);
 
@@ -71,60 +67,37 @@ function Carousel(
     return generateOffsets({
       sliderWidth,
       itemWidth,
-      itemCount: data.length + (loop ? 2 : 0),
+      itemCount: data.length + (loop ? additionalPagesPerSide * 2 : 0),
       horizontalPadding,
     });
   }, [sliderWidth, itemWidth, data, horizontalPadding]);
 
   const pageItems = useMemo(() => {
-    const items = [
-      ...(loop ? [data[data.length - 1]] : []),
-      ...data,
-      ...(loop ? [data[0]] : []),
-    ];
-    return items;
-  }, [data, loop]);
-
-  const getActualPage = useCallback((page: number) => {
     if (loop) {
-      if (page > data.length) return 0;
-      if (page === 0) return data.length - 1;
-      return page - 1;
-    }
-    return page;
-  }, [loop, data]);
-
-  const handlePageChange = useCallback((page: number) => {
-    const actualPage = getActualPage(page);
-    animatedPage.value = actualPage;
-    if (onPageChange) {
-      onPageChange(actualPage);
-    }
-    currentPage.value = page;
-    if (!loop) return;
-    if (page === data.length + 1) {
-      jumpTo(1);
-    } else if (page === 0) {
-      jumpTo(data.length);
-    }
-  }, [onPageChange, loop])
-
-  const refreshPage = useCallback(
-    (offset) => {
-      'worklet';
-      const pageNum = findNearestPage(offset, offsets, 20);     
-      if (pageNum === -1) {
-        return;
+      const headItems = data.slice(
+        data.length - additionalPagesPerSide,
+        data.length
+      );
+      const tailItems = data.slice(0, additionalPagesPerSide);
+      const newItems = [...headItems, ...data, ...tailItems];
+      for (let i = 0; i < newItems.length; i++) {
+        pageMapper.current[i] = (data.length - additionalPagesPerSide + i) % data.length;
       }
-      if (pageNum !== currentPage.value) {
-        if (expectedPosition.current === pageNum) {
-          freeze.value = false;
-        }
-        runOnJS(handlePageChange)(pageNum);
+      return newItems;
+    } else {
+      for (let i = 0; i < data.length; i++) {
+        pageMapper.current[i] = i;
       }
+      return data;
+    }
+  }, [data, loop]);  
+
+  const getActualPage = useCallback(
+    (page: number) => {
+      return pageMapper.current[page]
     },
-    [isDragging, offsets, handlePageChange]
-  );
+    []
+  ); 
 
   const getRef = useCallback(() => {
     if (!scrollViewRef.current) return;
@@ -142,15 +115,6 @@ function Carousel(
     },
     [getRef, offsets]
   );
-
-  useEffect(() => {
-    if (currentPage.value !== 0) {
-      setTimeout(() => {
-        handleScrollTo(currentPage.value, false);
-        freeze.value = false;
-      });
-    }
-  }, []);
 
   const jumpTo = useCallback(
     (page: number, delay = 200) => {
@@ -176,12 +140,56 @@ function Carousel(
     handleScrollTo(prev);
   }, [handleScrollTo]);
 
+  const handlePageChange = useCallback(
+    (page: number) => {
+      const actualPage = getActualPage(page);
+      animatedPage.value = actualPage;
+      if (onPageChange) {
+        onPageChange(actualPage);
+      }
+      currentPage.value = page;
+      if (!loop) return;     
+      if (page === pageItems.length - 1) {
+        jumpTo((additionalPagesPerSide * 2) - 1);
+      } else if (page === 0) {
+        jumpTo(pageItems.length - (additionalPagesPerSide * 2));
+      }
+    },
+    [onPageChange, loop, getActualPage, jumpTo, pageItems]
+  );
+
+  const refreshPage = useCallback(
+    (offset) => {
+      'worklet';
+      const pageNum = findNearestPage(offset, offsets, 20);
+      if (pageNum === -1) {
+        return;
+      }
+      if (pageNum !== currentPage.value) {
+        if (expectedPosition.current === pageNum) {
+          freeze.value = false;
+        }
+        runOnJS(handlePageChange)(pageNum);
+      }
+    },
+    [isDragging, offsets, handlePageChange]
+  );
+
   useInterval(
     () => {
       goNext();
     },
     !autoPlay || !loop || isDragging ? -1 : duration
   );
+
+  useEffect(() => {
+    if (currentPage.value !== 0) {
+      setTimeout(() => {
+        handleScrollTo(currentPage.value, false);
+        freeze.value = false;
+      });
+    }
+  }, []);
 
   const beginDrag = useCallback(() => {
     setDragging(true);

@@ -110,6 +110,7 @@ function MyCarousel() {
 | ----- | ----------- |:-------:|
 | data | array of item to be rendered.<br>- `id: string`: this will be used as key to render<br>- `source: ImageSourcePropType`: optional. Image source. If you don't want to pass `source` here. You could use `renderItem` below to render your custom image.|
 |loop?| Whether your carousel can loop or not | false |
+|additionalPagesPerSide?| When looping, how many page will be added at head and tail to perform loop effect | 2 |
 |autoPlay?| Auto animate to next image with `duration`.| false|
 |duration?| duration to animate. used with `autoPlay` above|1000|
 |animation?| predefined animation. Will be `parallax` for now||

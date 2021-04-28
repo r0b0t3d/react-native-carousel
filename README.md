@@ -125,6 +125,13 @@ function MyCarousel() {
 |renderItem?| `(item: CarouselData) => React.ReactNode`<br> custom image render. | |
 |onPageChange?| `(index: number) => void`<br> callback to notify when page change | |
 
+## Methods
+
+| Method | Description |
+| ------ | ----------- |
+| goNext | Go to next index |
+| goPrev | Go to previous index |
+| snapToItem | `(index: number, animated?: boolean) => void`<br>Snap to specific index <br>- `index`: destination index<br>- `animated`: should animate or not, default is `true` |
 ## Contributing
 
 See the [contributing guide](CONTRIBUTING.md) to learn how to contribute to the repository and the development workflow.

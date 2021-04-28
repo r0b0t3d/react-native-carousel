@@ -93,6 +93,7 @@ export default function App() {
       <Carousel
         ref={carousel}
         style={{ height: 200 }}
+        initialPage={2}
         data={data}
         loop={true}
         autoPlay={false}

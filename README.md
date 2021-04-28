@@ -108,22 +108,23 @@ function MyCarousel() {
 
 | Props | Description | Default |
 | ----- | ----------- |:-------:|
-| data | array of item to be rendered.<br>- `id: string`: this will be used as key to render<br>- `source: ImageSourcePropType`: optional. Image source. If you don't want to pass `source` here. You could use `renderItem` below to render your custom image.|
+| data | Array of item to be rendered.<br>- `id: string`: this will be used as key to render<br>- `source: ImageSourcePropType`: optional. Image source. If you don't want to pass `source` here. You could use `renderItem` below to render your custom image. <br> ------ <br>Or it could be array of string |
 |loop?| Whether your carousel can loop or not | false |
+|initialPage?| Set the first page show up | 0 |
 |additionalPagesPerSide?| When looping, how many page will be added at head and tail to perform loop effect | 2 |
 |autoPlay?| Auto animate to next image with `duration`.| false|
-|duration?| duration to animate. used with `autoPlay` above|1000|
-|animation?| predefined animation. Will be `parallax` for now||
-|sliderWidth?| define slider width | screen's width |
-|itemWidth?| define item width | screen's width |
-|firstItemAlignment?| `'center' | 'start'`<br> align first item | center |
-|inactiveOpacity?| [0 - 1] define opacity for inactive items | 1 |
+|duration?| Duration to animate. used with `autoPlay` above|1000|
+|animation?| Predefined animation. Will be `parallax` for now||
+|sliderWidth?| Define slider width | screen's width |
+|itemWidth?| Define item width | screen's width |
+|firstItemAlignment?| `'center' | 'start'`<br> Align first item | center |
+|inactiveOpacity?| [0 - 1] Define opacity for inactive items | 1 |
 |inactiveScale?| [0 - 1] define scale value for inactive items | 1 |
-|spaceBetween?| add additional space between items | 0 |
-|spaceHeadTail?| add more space in head/tail. This only work if `firstItemAlignment = 'start'` | 0 |
-|animatedPage?| animated value which is the current page. This value used to pass into `PaginationIndicator` for animation | |
-|renderItem?| `(item: CarouselData) => React.ReactNode`<br> custom image render. | |
-|onPageChange?| `(index: number) => void`<br> callback to notify when page change | |
+|spaceBetween?| Add additional space between items | 0 |
+|spaceHeadTail?| Add more space in head/tail. This only work if `firstItemAlignment = 'start'` | 0 |
+|animatedPage?| Animated value which is the current page. This value used to pass into `PaginationIndicator` for animation | |
+|renderItem?| `(item: CarouselData) => React.ReactNode`<br> Custom image render. | |
+|onPageChange?| `(index: number) => void`<br> Callback to notify when page change | |
 
 ## Methods
 

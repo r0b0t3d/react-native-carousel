@@ -26,9 +26,10 @@ export type CarouselProps = {
   onPageChange?: (index: number) => void;
 };
 
-export type CarouselRef = {
-  next(): void;
-  prev(): void;
+export type CarouselHandles = {
+  goNext(): void;
+  goPrev(): void;
+  snapToItem(index: number, animated?: boolean): void;
 };
 
 export type AnimatorProps = {

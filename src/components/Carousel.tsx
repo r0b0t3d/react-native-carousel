@@ -16,7 +16,7 @@ import Animated, {
   runOnJS,
   useAnimatedProps,
 } from 'react-native-reanimated';
-import type { CarouselProps, CarouselRef } from '../types';
+import type { CarouselProps, CarouselHandles } from '../types';
 import PageItem from './PageItem';
 import { findNearestPage, generateOffsets } from '../utils';
 import type { CarouselData } from '../types';
@@ -43,24 +43,26 @@ function Carousel(
     onPageChange,
     animatedPage = useSharedValue(0),
   }: CarouselProps,
-  ref: Ref<CarouselRef>
+  ref: Ref<CarouselHandles>
 ) {
   const currentPage = useSharedValue(loop ? additionalPagesPerSide : 0);
-  const [isDragging, setDragging] = useState(false);
   const animatedScroll = useSharedValue(currentPage.value * sliderWidth);
   const freeze = useSharedValue(loop);
+  const [isDragging, setDragging] = useState(false);
   const expectedPosition = useRef(-1);
+  const pageMapper = useRef<Record<number, number>>({});
+
   const horizontalPadding = useMemo(() => {
     const padding = (sliderWidth - itemWidth) / 2;
     return firstItemAlignment === 'center' || loop ? padding : spaceHeadTail;
   }, [sliderWidth, itemWidth, firstItemAlignment, loop, spaceHeadTail]);
-  const pageMapper = useRef<any>({})
 
   const scrollViewRef = useRef<any>(null);
 
   useImperativeHandle(ref, () => ({
-    next: goNext,
-    prev: goPrev,
+    goNext,
+    goPrev,
+    snapToItem,
   }));
 
   const offsets = useMemo(() => {
@@ -81,7 +83,8 @@ function Carousel(
       const tailItems = data.slice(0, additionalPagesPerSide);
       const newItems = [...headItems, ...data, ...tailItems];
       for (let i = 0; i < newItems.length; i++) {
-        pageMapper.current[i] = (data.length - additionalPagesPerSide + i) % data.length;
+        pageMapper.current[i] =
+          (data.length - additionalPagesPerSide + i) % data.length;
       }
       return newItems;
     } else {
@@ -90,14 +93,11 @@ function Carousel(
       }
       return data;
     }
-  }, [data, loop]);  
+  }, [data, loop]);
 
-  const getActualPage = useCallback(
-    (page: number) => {
-      return pageMapper.current[page]
-    },
-    []
-  ); 
+  const getActualPage = useCallback((page: number) => {
+    return pageMapper.current[page];
+  }, []);
 
   const getRef = useCallback(() => {
     if (!scrollViewRef.current) return;
@@ -140,6 +140,25 @@ function Carousel(
     handleScrollTo(prev);
   }, [handleScrollTo]);
 
+  const snapToItem = useCallback(
+    (index: number, animated = true) => {
+      if (index < 0 || index >= data.length) {
+        console.error(`Index not valid ${index}`);
+        return;
+      }
+      let pageIndex = index;
+      if (loop) {
+        const indices: number[] = Object.keys(pageMapper.current)
+          .filter((idx) => pageMapper.current[Number(idx)] === index)
+          .map((idx) => Number(idx));
+        const toIndex = findNearestPage(currentPage.value, indices, 10);
+        pageIndex = indices[toIndex];
+      }
+      handleScrollTo(pageIndex, animated);
+    },
+    [handleScrollTo]
+  );
+
   const handlePageChange = useCallback(
     (page: number) => {
       const actualPage = getActualPage(page);
@@ -148,11 +167,11 @@ function Carousel(
         onPageChange(actualPage);
       }
       currentPage.value = page;
-      if (!loop) return;     
+      if (!loop) return;
       if (page === pageItems.length - 1) {
-        jumpTo((additionalPagesPerSide * 2) - 1);
+        jumpTo(additionalPagesPerSide * 2 - 1);
       } else if (page === 0) {
-        jumpTo(pageItems.length - (additionalPagesPerSide * 2));
+        jumpTo(pageItems.length - additionalPagesPerSide * 2);
       }
     },
     [onPageChange, loop, getActualPage, jumpTo, pageItems]

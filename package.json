@@ -1,6 +1,6 @@
 {
   "name": "@r0b0t3d/react-native-carousel",
-  "version": "3.2.0",
+  "version": "3.2.1",
   "description": "React Native Carousel",
   "main": "lib/commonjs/index",
   "module": "lib/module/index",

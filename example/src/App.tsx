@@ -8,9 +8,19 @@
  * https://github.com/facebook/react-native
  */
 
-import React from 'react';
-import { StyleSheet, View, Image, Dimensions } from 'react-native';
-import Carousel, { PaginationIndicator } from '@r0b0t3d/react-native-carousel';
+import React, { useCallback, useRef } from 'react';
+import {
+  StyleSheet,
+  View,
+  Image,
+  Dimensions,
+  TouchableOpacity,
+  Text,
+} from 'react-native';
+import Carousel, {
+  CarouselHandles,
+  PaginationIndicator,
+} from '@r0b0t3d/react-native-carousel';
 import { useSharedValue } from 'react-native-reanimated';
 
 const data = [
@@ -63,10 +73,25 @@ const { width } = Dimensions.get('window');
 
 export default function App() {
   const currentPage = useSharedValue(0);
+  const carousel = useRef<CarouselHandles>(null);
+
+  const handleRandom = useCallback(() => {
+    const randomIdx = Math.floor(Math.random() * data.length);    
+    carousel.current?.snapToItem(randomIdx, true);
+  }, []);
+
+  const handleNext = useCallback(() => {
+    carousel.current?.goNext();
+  }, [])
+  
+  const handlePrev = useCallback(() => {
+    carousel.current?.goPrev();
+  }, [])
 
   return (
     <View style={styles.container}>
       <Carousel
+        ref={carousel}
         style={{ height: 200 }}
         data={data}
         loop={true}
@@ -103,9 +128,21 @@ export default function App() {
             borderRadius: 5,
           }}
           indicatorConfigs={{
-            spaceBetween: 10
+            spaceBetween: 10,
           }}
         />
+      </View>
+
+      <View style={styles.buttonContainer}>
+      <TouchableOpacity style={styles.button} onPress={handlePrev}>
+          <Text>PREV</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={handleRandom}>
+          <Text>RANDOM</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={handleNext}>
+          <Text>NEXT</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -117,5 +154,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#F5FCFF',
+  },
+  buttonContainer: {
+    marginTop: 30,
+    flexDirection: 'row'
+  },
+  button: {
+    backgroundColor: '#b2b2b2',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginRight: 20
   },
 });

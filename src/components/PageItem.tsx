@@ -69,7 +69,7 @@ export default function PageItem({
     if (renderItem) {
       return renderItem(item);
     }
-    if (item.source) {
+    if (typeof item === 'object' && item.source) {
       return (
         <Image
           source={item.source}

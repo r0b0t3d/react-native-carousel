@@ -27,6 +27,7 @@ function Carousel(
   {
     style,
     data,
+    initialPage = 0,
     loop = false,
     additionalPagesPerSide = 2,
     autoPlay = false,
@@ -45,7 +46,7 @@ function Carousel(
   }: CarouselProps,
   ref: Ref<CarouselHandles>
 ) {
-  const currentPage = useSharedValue(loop ? additionalPagesPerSide : 0);
+  const currentPage = useSharedValue(0);
   const animatedScroll = useSharedValue(currentPage.value * sliderWidth);
   const freeze = useSharedValue(loop);
   const [isDragging, setDragging] = useState(false);
@@ -202,9 +203,17 @@ function Carousel(
   );
 
   useEffect(() => {
-    if (currentPage.value !== 0) {
+    if (initialPage < 0 || initialPage >= data.length) {
+      console.error(`Invalid initialPage ${initialPage}`);
+      return;
+    }
+    let pageIndex = initialPage;
+    if (loop) {
+      pageIndex = initialPage + additionalPagesPerSide;
+    }
+    if (currentPage.value !== pageIndex) {
       setTimeout(() => {
-        handleScrollTo(currentPage.value, false);
+        handleScrollTo(pageIndex, false);
         freeze.value = false;
       });
     }
@@ -216,6 +225,13 @@ function Carousel(
 
   const endDrag = useCallback(() => {
     setTimeout(() => setDragging(false), 200);
+  }, []);
+
+  const keyExtractor = useCallback((item: CarouselData, index: number) => {
+    if (typeof item === 'string') {
+      return `${item}-${index}`;
+    }
+    return `${item.id}-${index}`;
   }, []);
 
   const scrollHandler = useAnimatedScrollHandler(
@@ -256,7 +272,7 @@ function Carousel(
 
     return (
       <PageItem
-        key={`${item.id}-${i}`}
+        key={keyExtractor(item, i)}
         containerStyle={containerStyle}
         item={item}
         offset={offsets[i]}

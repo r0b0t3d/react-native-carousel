@@ -4,11 +4,12 @@ import type Animated from 'react-native-reanimated';
 export type CarouselData = {
   id: string;
   [key: string]: any;
-};
+} | string;
 
 export type CarouselProps = {
   style?: StyleProp<ViewStyle>;
   data: CarouselData[];
+  initialPage?: number;
   loop?: boolean;
   additionalPagesPerSide?: number;
   autoPlay?: boolean;

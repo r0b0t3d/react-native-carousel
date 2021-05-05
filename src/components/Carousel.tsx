@@ -14,7 +14,6 @@ import Animated, {
   useSharedValue,
   useAnimatedScrollHandler,
   runOnJS,
-  useAnimatedProps,
 } from 'react-native-reanimated';
 import type { CarouselProps, CarouselHandles } from '../types';
 import PageItem from './PageItem';
@@ -42,6 +41,7 @@ function Carousel<TData>(
     renderItem,
     onPageChange,
     animatedPage = useSharedValue(0),
+    scrollViewProps = {},
     keyExtractor,
   }: CarouselProps<TData>,
   ref: Ref<CarouselHandles>
@@ -257,12 +257,6 @@ function Carousel<TData>(
     [beginDrag, endDrag, refreshPage]
   );
 
-  const scrollViewProps = useAnimatedProps(() => {
-    return {
-      scrollEnabled: !freeze.value,
-    };
-  }, []);
-
   function renderPage(item: TData, i: number) {
     const containerStyle = useMemo(() => {
       if (firstItemAlignment === 'start') {
@@ -299,10 +293,11 @@ function Carousel<TData>(
     <View style={[style]}>
       <Animated.ScrollView
         ref={scrollViewRef}
+        {...scrollViewProps}
         style={styles.container}
         horizontal
         disableScrollViewPanResponder
-        disableIntervalMomentum={false}
+        disableIntervalMomentum
         showsHorizontalScrollIndicator={false}
         snapToOffsets={offsets}
         snapToStart
@@ -314,7 +309,6 @@ function Carousel<TData>(
         contentContainerStyle={{
           paddingHorizontal: horizontalPadding,
         }}
-        {...{ scrollViewProps }}
       >
         {pageItems.map(renderPage)}
       </Animated.ScrollView>

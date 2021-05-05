@@ -1,4 +1,4 @@
-import type { StyleProp, ViewStyle } from 'react-native';
+import type { ScrollViewProps, StyleProp, ViewStyle } from 'react-native';
 import type Animated from 'react-native-reanimated';
 
 export type CarouselProps<T = any> = {
@@ -18,6 +18,7 @@ export type CarouselProps<T = any> = {
   spaceBetween?: number;
   spaceHeadTail?: number;
   animatedPage?: Animated.SharedValue<number>;
+  scrollViewProps?: ScrollViewProps;
   renderItem: (
     data: { item: T; index?: number },
     animatedData?: {

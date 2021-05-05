@@ -28,7 +28,7 @@ type CarouselData = {
   id: string;
   source: ImageProps['source'];
   url: string;
-}
+};
 
 const data: CarouselData[] = [
   {
@@ -113,6 +113,9 @@ export default function App() {
         spaceHeadTail={20}
         animatedPage={currentPage}
         additionalPagesPerSide={3}
+        scrollViewProps={{
+          scrollEnabled: true,
+        }}
         renderItem={({ item }) => {
           return (
             <Image

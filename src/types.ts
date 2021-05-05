@@ -1,14 +1,9 @@
 import type { StyleProp, ViewStyle } from 'react-native';
 import type Animated from 'react-native-reanimated';
 
-export type CarouselData = {
-  id: string;
-  [key: string]: any;
-} | string;
-
-export type CarouselProps = {
+export type CarouselProps<T = any> = {
   style?: StyleProp<ViewStyle>;
-  data: CarouselData[];
+  data: T[];
   initialPage?: number;
   loop?: boolean;
   additionalPagesPerSide?: number;
@@ -23,8 +18,15 @@ export type CarouselProps = {
   spaceBetween?: number;
   spaceHeadTail?: number;
   animatedPage?: Animated.SharedValue<number>;
-  renderItem?: (item: any) => React.ReactNode;
+  renderItem: (
+    data: { item: T; index?: number },
+    animatedData?: {
+      scrollPosition?: Animated.SharedValue<number>;
+      offset?: number;
+    }
+  ) => React.ReactNode;
   onPageChange?: (index: number) => void;
+  keyExtractor?: (item: T, index?: number) => string;
 };
 
 export type CarouselHandles = {
@@ -46,12 +48,12 @@ export type PaginationProps = {
   containerStyle?: StyleProp<ViewStyle>;
   indicatorStyle?: StyleProp<ViewStyle>;
   activeIndicatorStyle?: StyleProp<ViewStyle>;
-  indicatorConfigs?: IndicatorConfigs
-}
+  indicatorConfigs?: IndicatorConfigs;
+};
 
 export type IndicatorConfigs = {
-  indicatorColor?: string,
-  indicatorSelectedColor?: string,
-  indicatorWidth?: number,
-  spaceBetween?: number,
-}
+  indicatorColor?: string;
+  indicatorSelectedColor?: string;
+  indicatorWidth?: number;
+  spaceBetween?: number;
+};

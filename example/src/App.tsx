@@ -16,6 +16,7 @@ import {
   Dimensions,
   TouchableOpacity,
   Text,
+  ImageProps,
 } from 'react-native';
 import Carousel, {
   CarouselHandles,
@@ -23,7 +24,13 @@ import Carousel, {
 } from '@r0b0t3d/react-native-carousel';
 import { useSharedValue } from 'react-native-reanimated';
 
-const data = [
+type CarouselData = {
+  id: string;
+  source: ImageProps['source'];
+  url: string;
+}
+
+const data: CarouselData[] = [
   {
     id: 'image1',
     source: {
@@ -76,17 +83,17 @@ export default function App() {
   const carousel = useRef<CarouselHandles>(null);
 
   const handleRandom = useCallback(() => {
-    const randomIdx = Math.floor(Math.random() * data.length);    
+    const randomIdx = Math.floor(Math.random() * data.length);
     carousel.current?.snapToItem(randomIdx, true);
   }, []);
 
   const handleNext = useCallback(() => {
     carousel.current?.goNext();
-  }, [])
-  
+  }, []);
+
   const handlePrev = useCallback(() => {
     carousel.current?.goPrev();
-  }, [])
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -100,13 +107,13 @@ export default function App() {
         duration={3000}
         itemWidth={width - 100}
         inactiveOpacity={0.5}
-        inactiveScale={1}
+        inactiveScale={0.8}
         firstItemAlignment="center"
-        spaceBetween={50}
+        spaceBetween={10}
         spaceHeadTail={20}
         animatedPage={currentPage}
         additionalPagesPerSide={3}
-        renderItem={(item) => {
+        renderItem={({ item }) => {
           return (
             <Image
               style={{
@@ -135,7 +142,7 @@ export default function App() {
       </View>
 
       <View style={styles.buttonContainer}>
-      <TouchableOpacity style={styles.button} onPress={handlePrev}>
+        <TouchableOpacity style={styles.button} onPress={handlePrev}>
           <Text>PREV</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.button} onPress={handleRandom}>
@@ -158,13 +165,13 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     marginTop: 30,
-    flexDirection: 'row'
+    flexDirection: 'row',
   },
   button: {
     backgroundColor: '#b2b2b2',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    marginRight: 20
+    marginRight: 20,
   },
 });

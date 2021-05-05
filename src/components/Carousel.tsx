@@ -19,11 +19,10 @@ import Animated, {
 import type { CarouselProps, CarouselHandles } from '../types';
 import PageItem from './PageItem';
 import { findNearestPage, generateOffsets } from '../utils';
-import type { CarouselData } from '../types';
 
 const { width: wWidth } = Dimensions.get('screen');
 
-function Carousel(
+function Carousel<TData>(
   {
     style,
     data,
@@ -43,7 +42,8 @@ function Carousel(
     renderItem,
     onPageChange,
     animatedPage = useSharedValue(0),
-  }: CarouselProps,
+    keyExtractor,
+  }: CarouselProps<TData>,
   ref: Ref<CarouselHandles>
 ) {
   const currentPage = useSharedValue(0);
@@ -227,12 +227,19 @@ function Carousel(
     setTimeout(() => setDragging(false), 200);
   }, []);
 
-  const keyExtractor = useCallback((item: CarouselData, index: number) => {
-    if (typeof item === 'string') {
-      return `${item}-${index}`;
-    }
-    return `${item.id}-${index}`;
-  }, []);
+  const getItemKey = useCallback(
+    (item: TData, index: number): string => {
+      if (keyExtractor) {
+        return `${keyExtractor(item, index)}-${index}`;
+      }
+      if ((item as any).id) {
+        return `${(item as any).id}-${index}`;
+      }
+      console.error('You need implement keyExtractor');
+      return '';
+    },
+    [keyExtractor]
+  );
 
   const scrollHandler = useAnimatedScrollHandler(
     {
@@ -256,7 +263,7 @@ function Carousel(
     };
   }, []);
 
-  function renderPage(item: CarouselData, i: number) {
+  function renderPage(item: TData, i: number) {
     const containerStyle = useMemo(() => {
       if (firstItemAlignment === 'start') {
         return {
@@ -272,9 +279,10 @@ function Carousel(
 
     return (
       <PageItem
-        key={keyExtractor(item, i)}
+        key={getItemKey(item, i)}
         containerStyle={containerStyle}
         item={item}
+        index={i}
         offset={offsets[i]}
         itemWidth={itemWidth}
         animatedValue={animatedScroll}
@@ -314,7 +322,11 @@ function Carousel(
   );
 }
 
-export default forwardRef(Carousel);
+const ForwardedCarousel = forwardRef(Carousel) as <T>(
+  props: CarouselProps<T> & { ref?: Ref<CarouselHandles> }
+) => ReturnType<typeof Carousel>;
+
+export default ForwardedCarousel;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },

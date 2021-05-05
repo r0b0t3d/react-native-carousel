@@ -9,7 +9,16 @@ Note: Currently, I am using `react-native-reanimated` for animation. So you shou
 `$ yarn add react-native-reanimated`
 
 ## Breaking changes
- ### v3.0.0
+
+### v3.3.0
+  - Changed: `renderItem` now required and add more props to easy customization
+  ```
+  renderItem: (
+    data: { item: T; index?: number },
+    animatedData?: { scrollPosition?: Animated.SharedValue<number>, offset?: number }
+  ) => React.ReactNode
+  ````
+### v3.0.0
   - Added: 
     - `animatedPage`: animated value used which is current selected page. Used to pass into the `PaginationIndicator` for animation.
   - Removed:
@@ -17,7 +26,7 @@ Note: Currently, I am using `react-native-reanimated` for animation. So you shou
     - `renderOverlay`: you can render overlay inside `renderItem` function
   - Changed: 
     - `renderImage` -> `renderItem`
- ### v2.0.0
+### v2.0.0
   - requires `react-native-reanimated@2.1.0`
 
 ## Show cases
@@ -73,7 +82,7 @@ function MyCarousel() {
       firstItemAlignment="start"
       spaceBetween={20}
       animatedPage={currentPage}
-      renderItem={(item) => {
+      renderItem={({item}) => {
         return (
           <Image
             style={{
@@ -123,7 +132,7 @@ function MyCarousel() {
 |spaceBetween?| Add additional space between items | 0 |
 |spaceHeadTail?| Add more space in head/tail. This only work if `firstItemAlignment = 'start'` | 0 |
 |animatedPage?| Animated value which is the current page. This value used to pass into `PaginationIndicator` for animation | |
-|renderItem?| `(item: CarouselData) => React.ReactNode`<br> Custom image render. | |
+|renderItem| `(data: { item: T; index?: number }, animatedData?: { scrollPosition?: Animated.SharedValue<number>, offset?: number }) => React.ReactNode`<br>Render carousel item | |
 |onPageChange?| `(index: number) => void`<br> Callback to notify when page change | |
 
 ## Methods

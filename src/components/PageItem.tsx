@@ -1,16 +1,17 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import React, { ReactNode } from 'react';
+import React from 'react';
 import { Image, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import Animated, {
   interpolate,
   useAnimatedStyle,
 } from 'react-native-reanimated';
-import type { CarouselData } from '../types';
+import type { CarouselProps } from '../types';
 
-type Props = {
-  item: CarouselData;
+type Props<TData> = {
+  item: TData;
+  index: number;
   offset: number;
-  renderItem?: (item: CarouselData) => ReactNode;
+  renderItem: CarouselProps['renderItem'];
   animatedValue: Animated.SharedValue<number>;
   animation?: 'parallax';
   freeze: Animated.SharedValue<boolean>;
@@ -20,8 +21,9 @@ type Props = {
   containerStyle: StyleProp<ViewStyle>;
 };
 
-export default function PageItem({
+export default function PageItem<TData = any>({
   item,
+  index,
   offset,
   renderItem,
   animatedValue,
@@ -31,7 +33,7 @@ export default function PageItem({
   inactiveOpacity,
   inactiveScale,
   containerStyle,
-}: Props) {
+}: Props<TData>) {
   // @ts-ignore
   const animatedStyle = useAnimatedStyle(() => {
     const inputRange = [offset - itemWidth, offset, offset + itemWidth];
@@ -67,12 +69,12 @@ export default function PageItem({
 
   function renderContent() {
     if (renderItem) {
-      return renderItem(item);
+      return renderItem({ item, index }, { scrollPosition: animatedValue, offset });
     }
-    if (typeof item === 'object' && item.source) {
+    if (typeof item === 'object' && (item as any).source) {
       return (
         <Image
-          source={item.source}
+          source={(item as any).source}
           style={{
             ...StyleSheet.absoluteFillObject,
             height: undefined,

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import React, { useCallback, useMemo } from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import Animated, {
@@ -5,12 +6,13 @@ import Animated, {
   useDerivedValue,
   withSpring,
 } from 'react-native-reanimated';
-import type { PaginationProps } from '../types';
+import type { IndicatorConfigs, PaginationProps } from '../types';
 
-const defaultIndicatorConfigs = {
+const defaultIndicatorConfigs: IndicatorConfigs = {
   indicatorColor: 'gray',
-  indicatorSelectedColor: 'blue',
   indicatorWidth: 6,
+  indicatorSelectedColor: 'blue',
+  indicatorSelectedWidth: 6,  
   spaceBetween: 3,
 };
 
@@ -54,7 +56,7 @@ export default function PaginationIndicator({
 
   const translateX = useDerivedValue(() => {
     return withSpring(
-      currentPage.value * (configs.indicatorWidth + configs.spaceBetween),
+      currentPage.value * (configs.indicatorWidth! + configs.spaceBetween!),
       defaultSpringConfig
     );
   }, []);
@@ -70,10 +72,18 @@ export default function PaginationIndicator({
   }, []);
 
   const renderItem = useCallback((pageNumber: number) => {
+    // @ts-ignore
+    if (activeIndicatorStyle?.width) {
+      console.error("Do not use activeIndicatorStyle: { width }. Please use indicatorConfigs: { indicatorSelectedWidth } instead");
+    }
+    // @ts-ignore
+    if (indicatorStyle?.width) {
+      console.error("Do not use indicatorStyle: { width }. Please use indicatorConfigs: { indicatorWidth } instead");
+    }
     const dotContainerStyle: ViewStyle = StyleSheet.flatten([
       styles.dotContainer,
       {
-        width: configs.indicatorWidth,
+        width: configs.indicatorSelectedWidth,
         height: configs.indicatorWidth,
         marginEnd: configs.spaceBetween,
       },
@@ -87,18 +97,19 @@ export default function PaginationIndicator({
       {
         width: configs.indicatorWidth,
         height: configs.indicatorWidth,
-        borderRadius: configs.indicatorWidth / 2,
+        borderRadius: configs.indicatorWidth! / 2,
         backgroundColor: configs.indicatorColor,
       },
       indicatorStyle,
     ]);
 
+    console.log(configs);
+    
+
     const aStyle = useAnimatedStyle(() => {
       return {
         width: withSpring(
-          currentPage.value === pageNumber
-            ? (dotContainerStyle.width as number || configs.indicatorWidth)
-            : (dotStyle.width as number || configs.indicatorWidth),
+          currentPage.value === pageNumber ? configs.indicatorSelectedWidth! : configs.indicatorWidth!,
           defaultSpringConfig
         ),
       };
@@ -120,9 +131,9 @@ export default function PaginationIndicator({
         style={[
           styles.dotSelectedStyle,
           {
-            width: configs.indicatorWidth,
+            width: configs.indicatorSelectedWidth,
             height: configs.indicatorWidth,
-            borderRadius: configs.indicatorWidth / 2,
+            borderRadius: configs.indicatorWidth! / 2,
             backgroundColor: configs.indicatorSelectedColor,
           },
           activeIndicatorStyle,

@@ -134,12 +134,13 @@ export default function App() {
           currentPage={currentPage}
           containerStyle={{ marginTop: 20 }}
           activeIndicatorStyle={{
-            width: 20,
-            height: 10,
+            height: 20,
             borderRadius: 5,
           }}
           indicatorConfigs={{
             spaceBetween: 10,
+            indicatorWidth: 10,
+            indicatorSelectedWidth: 20,
           }}
         />
       </View>

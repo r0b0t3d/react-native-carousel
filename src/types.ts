@@ -47,14 +47,15 @@ export type PaginationProps = {
   totalPage: number;
   currentPage: Animated.SharedValue<number>;
   containerStyle?: StyleProp<ViewStyle>;
-  indicatorStyle?: StyleProp<ViewStyle>;
-  activeIndicatorStyle?: StyleProp<ViewStyle>;
+  indicatorStyle?: Omit<StyleProp<ViewStyle>, 'width'>;
+  activeIndicatorStyle?: Omit<StyleProp<ViewStyle>, 'width'>;
   indicatorConfigs?: IndicatorConfigs;
 };
 
 export type IndicatorConfigs = {
   indicatorColor?: string;
-  indicatorSelectedColor?: string;
   indicatorWidth?: number;
+  indicatorSelectedColor?: string;
+  indicatorSelectedWidth?: number;
   spaceBetween?: number;
 };

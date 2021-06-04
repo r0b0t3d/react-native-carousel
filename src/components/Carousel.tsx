@@ -166,8 +166,7 @@ function Carousel<TData>(
       animatedPage.value = actualPage;
       if (onPageChange) {
         onPageChange(actualPage);
-      }
-      currentPage.value = page;
+      }      
       if (!loop) return;
       if (page === pageItems.length - 1) {
         jumpTo(additionalPagesPerSide * 2 - 1);
@@ -189,6 +188,7 @@ function Carousel<TData>(
         if (expectedPosition.current === pageNum) {
           freeze.value = false;
         }
+        currentPage.value = pageNum;
         runOnJS(handlePageChange)(pageNum);
       }
     },
@@ -220,12 +220,16 @@ function Carousel<TData>(
   }, []);
 
   const beginDrag = useCallback(() => {
-    setDragging(true);
-  }, []);
+    if (autoPlay) {
+      setDragging(true);
+    }
+  }, [autoPlay]);
 
   const endDrag = useCallback(() => {
-    setTimeout(() => setDragging(false), 200);
-  }, []);
+    if (autoPlay) {
+      setTimeout(() => setDragging(false), 200);
+    }
+  }, [autoPlay]);
 
   const getItemKey = useCallback(
     (item: TData, index: number): string => {
@@ -257,24 +261,27 @@ function Carousel<TData>(
     [beginDrag, endDrag, refreshPage]
   );
 
-  function renderPage(item: TData, i: number) {
-    const containerStyle = useMemo(() => {
+  const containerStyle = useCallback(
+    (index: number) => {
       if (firstItemAlignment === 'start') {
         return {
-          paddingLeft: i === 0 ? 0 : spaceBetween / 2,
-          paddingRight: i === data.length - 1 ? 0 : spaceBetween / 2,
+          paddingLeft: index === 0 ? 0 : spaceBetween / 2,
+          paddingRight: index === data.length - 1 ? 0 : spaceBetween / 2,
         };
       }
       return {
         paddingLeft: spaceBetween / 2,
         paddingRight: spaceBetween / 2,
       };
-    }, [spaceBetween, firstItemAlignment]);
+    },
+    [spaceBetween, firstItemAlignment]
+  );
 
+  function renderPage(item: TData, i: number) {
     return (
       <PageItem
         key={getItemKey(item, i)}
-        containerStyle={containerStyle}
+        containerStyle={containerStyle(i)}
         item={item}
         index={i}
         offset={offsets[i]}

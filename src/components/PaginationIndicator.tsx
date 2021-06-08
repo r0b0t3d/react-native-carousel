@@ -101,10 +101,7 @@ export default function PaginationIndicator({
         backgroundColor: configs.indicatorColor,
       },
       indicatorStyle,
-    ]);
-
-    console.log(configs);
-    
+    ]);   
 
     const aStyle = useAnimatedStyle(() => {
       return {

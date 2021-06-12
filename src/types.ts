@@ -36,6 +36,18 @@ export type CarouselHandles = {
   snapToItem(index: number, animated?: boolean): void;
 };
 
+export type CarouselContextType = {
+  goNext(): void;
+  goPrev(): void;
+  snapToItem(index: number, animated?: boolean): void;
+  currentPage: Animated.SharedValue<number>;
+  totalPage: Animated.SharedValue<number>;
+};
+
+export type CarouselContextInternalType = {
+  setCarouselHandlers: (handlers: any) => void;
+}
+
 export type AnimatorProps = {
   animatedValue: Animated.SharedValue<number>;
   offset: number;
@@ -45,7 +57,6 @@ export type AnimatorProps = {
 
 export type PaginationProps = {
   totalPage: number;
-  currentPage: Animated.SharedValue<number>;
   containerStyle?: StyleProp<ViewStyle>;
   indicatorStyle?: Omit<StyleProp<ViewStyle>, 'width'>;
   activeIndicatorStyle?: Omit<StyleProp<ViewStyle>, 'width'>;

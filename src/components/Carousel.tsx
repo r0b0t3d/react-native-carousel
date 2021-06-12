@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import React, {
   useState,
   useRef,
@@ -18,6 +19,8 @@ import Animated, {
 import type { CarouselProps, CarouselHandles } from '../types';
 import PageItem from './PageItem';
 import { findNearestPage, generateOffsets } from '../utils';
+import { useCarouselContext } from './useCarouselContext';
+import { useInternalCarouselContext } from './useInternalCarouselContext';
 
 const { width: wWidth } = Dimensions.get('screen');
 
@@ -40,7 +43,6 @@ function Carousel<TData>(
     spaceHeadTail = 0,
     renderItem,
     onPageChange,
-    animatedPage = useSharedValue(0),
     scrollViewProps = {},
     keyExtractor,
   }: CarouselProps<TData>,
@@ -52,7 +54,8 @@ function Carousel<TData>(
   const [isDragging, setDragging] = useState(false);
   const expectedPosition = useRef(-1);
   const pageMapper = useRef<Record<number, number>>({});
-
+  const { currentPage: animatedPage, totalPage } = useCarouselContext();
+  
   const horizontalPadding = useMemo(() => {
     const padding = (sliderWidth - itemWidth) / 2;
     return firstItemAlignment === 'center' || loop ? padding : spaceHeadTail;
@@ -76,6 +79,10 @@ function Carousel<TData>(
   }, [sliderWidth, itemWidth, data, horizontalPadding]);
 
   const pageItems = useMemo(() => {
+    if (!data) {
+      return [];
+    }
+    totalPage.value = data.length;
     if (loop) {
       const headItems = data.slice(
         data.length - additionalPagesPerSide,
@@ -131,7 +138,7 @@ function Carousel<TData>(
     [handleScrollTo, animatedScroll, freeze]
   );
 
-  const goNext = useCallback(() => {
+  const goNext = useCallback(() => {    
     const next = currentPage.value + 1;
     handleScrollTo(next);
   }, [handleScrollTo]);
@@ -160,13 +167,25 @@ function Carousel<TData>(
     [handleScrollTo]
   );
 
+  const { setCarouselHandlers } = useInternalCarouselContext();
+
+  useEffect(() => {
+    if (setCarouselHandlers) {
+      setCarouselHandlers({
+        goNext,
+        goPrev,
+        snapToItem,
+      });
+    }
+  }, [goNext, goPrev, snapToItem, setCarouselHandlers]);
+
   const handlePageChange = useCallback(
     (page: number) => {
       const actualPage = getActualPage(page);
       animatedPage.value = actualPage;
       if (onPageChange) {
         onPageChange(actualPage);
-      }      
+      }
       if (!loop) return;
       if (page === pageItems.length - 1) {
         jumpTo(additionalPagesPerSide * 2 - 1);

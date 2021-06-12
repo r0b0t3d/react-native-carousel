@@ -8,7 +8,7 @@
  * https://github.com/facebook/react-native
  */
 
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -19,12 +19,10 @@ import {
   ImageProps,
 } from 'react-native';
 import Carousel, {
-  CarouselHandles,
   PaginationIndicator,
   withCarouselContext,
   useCarouselContext,
 } from '@r0b0t3d/react-native-carousel';
-import { useSharedValue } from 'react-native-reanimated';
 
 type CarouselData = {
   id: string;

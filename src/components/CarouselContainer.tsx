@@ -4,9 +4,8 @@ import React, {
   useCallback,
   useMemo,
   useRef,
-  useState,
 } from 'react';
-import Animated, { useSharedValue } from 'react-native-reanimated';
+import { useSharedValue } from 'react-native-reanimated';
 import type { CarouselHandles } from 'src/types';
 import { CarouselContext } from './useCarouselContext';
 import { InternalCarouselContext } from './useInternalCarouselContext';

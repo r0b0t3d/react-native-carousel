@@ -8,7 +8,7 @@
  * https://github.com/facebook/react-native
  */
 
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -19,10 +19,10 @@ import {
   ImageProps,
 } from 'react-native';
 import Carousel, {
-  CarouselHandles,
   PaginationIndicator,
+  withCarouselContext,
+  useCarouselContext,
 } from '@r0b0t3d/react-native-carousel';
-import { useSharedValue } from 'react-native-reanimated';
 
 type CarouselData = {
   id: string;
@@ -78,27 +78,25 @@ const data: CarouselData[] = [
 
 const { width } = Dimensions.get('window');
 
-export default function App() {
-  const currentPage = useSharedValue(0);
-  const carousel = useRef<CarouselHandles>(null);
+function App() {
+  const { goNext, goPrev, snapToItem } = useCarouselContext();
 
   const handleRandom = useCallback(() => {
     const randomIdx = Math.floor(Math.random() * data.length);
-    carousel.current?.snapToItem(randomIdx, true);
+    snapToItem(randomIdx, true);
   }, []);
 
   const handleNext = useCallback(() => {
-    carousel.current?.goNext();
+    goNext();
   }, []);
 
   const handlePrev = useCallback(() => {
-    carousel.current?.goPrev();
+    goPrev();
   }, []);
 
   return (
     <View style={styles.container}>
       <Carousel
-        ref={carousel}
         style={{ height: 200 }}
         initialPage={2}
         data={data}
@@ -111,7 +109,6 @@ export default function App() {
         firstItemAlignment="center"
         spaceBetween={10}
         spaceHeadTail={20}
-        animatedPage={currentPage}
         additionalPagesPerSide={3}
         scrollViewProps={{
           scrollEnabled: true,
@@ -130,8 +127,6 @@ export default function App() {
       />
       <View>
         <PaginationIndicator
-          totalPage={data.length}
-          currentPage={currentPage}
           containerStyle={{ marginTop: 20 }}
           activeIndicatorStyle={{
             height: 20,
@@ -159,6 +154,8 @@ export default function App() {
     </View>
   );
 }
+
+export default withCarouselContext(App);
 
 const styles = StyleSheet.create({
   container: {

@@ -4,15 +4,17 @@ import { View, StyleSheet, ViewStyle } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useDerivedValue,
+  useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
 import type { IndicatorConfigs, PaginationProps } from '../types';
+import { useCarouselContext } from './useCarouselContext';
 
 const defaultIndicatorConfigs: IndicatorConfigs = {
   indicatorColor: 'gray',
   indicatorWidth: 6,
   indicatorSelectedColor: 'blue',
-  indicatorSelectedWidth: 6,  
+  indicatorSelectedWidth: 6,
   spaceBetween: 3,
 };
 
@@ -40,13 +42,16 @@ const defaultSpringConfig = {
 };
 
 export default function PaginationIndicator({
-  totalPage,
-  currentPage,
+  // totalPage,
   containerStyle,
   indicatorStyle,
   activeIndicatorStyle,
   indicatorConfigs,
 }: PaginationProps) {
+  const carouselContext = useCarouselContext();
+  const page = useSharedValue(0);
+  const currentPage = carouselContext.currentPage || page;
+
   const configs = useMemo(() => {
     return {
       ...defaultIndicatorConfigs,
@@ -74,11 +79,15 @@ export default function PaginationIndicator({
   const renderItem = useCallback((pageNumber: number) => {
     // @ts-ignore
     if (activeIndicatorStyle?.width) {
-      console.error("Do not use activeIndicatorStyle: { width }. Please use indicatorConfigs: { indicatorSelectedWidth } instead");
+      console.error(
+        'Do not use activeIndicatorStyle: { width }. Please use indicatorConfigs: { indicatorSelectedWidth } instead'
+      );
     }
     // @ts-ignore
     if (indicatorStyle?.width) {
-      console.error("Do not use indicatorStyle: { width }. Please use indicatorConfigs: { indicatorWidth } instead");
+      console.error(
+        'Do not use indicatorStyle: { width }. Please use indicatorConfigs: { indicatorWidth } instead'
+      );
     }
     const dotContainerStyle: ViewStyle = StyleSheet.flatten([
       styles.dotContainer,
@@ -90,8 +99,8 @@ export default function PaginationIndicator({
       activeIndicatorStyle,
       {
         // Disable backgroundColor in activeIndicatorStyle
-        backgroundColor: undefined
-      }
+        backgroundColor: undefined,
+      },
     ]);
     const dotStyle: ViewStyle = StyleSheet.flatten([
       {
@@ -101,12 +110,14 @@ export default function PaginationIndicator({
         backgroundColor: configs.indicatorColor,
       },
       indicatorStyle,
-    ]);   
+    ]);
 
     const aStyle = useAnimatedStyle(() => {
       return {
         width: withSpring(
-          currentPage.value === pageNumber ? configs.indicatorSelectedWidth! : configs.indicatorWidth!,
+          currentPage.value === pageNumber
+            ? configs.indicatorSelectedWidth!
+            : configs.indicatorWidth!,
           defaultSpringConfig
         ),
       };
@@ -123,7 +134,7 @@ export default function PaginationIndicator({
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {[...Array(totalPage).keys()].map(renderItem)}
+      {[...Array(carouselContext.totalPage.value).keys()].map(renderItem)}
       <Animated.View
         style={[
           styles.dotSelectedStyle,

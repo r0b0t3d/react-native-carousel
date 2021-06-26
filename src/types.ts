@@ -56,7 +56,6 @@ export type AnimatorProps = {
 };
 
 export type PaginationProps = {
-  totalPage: number;
   containerStyle?: StyleProp<ViewStyle>;
   indicatorStyle?: Omit<StyleProp<ViewStyle>, 'width'>;
   activeIndicatorStyle?: Omit<StyleProp<ViewStyle>, 'width'>;

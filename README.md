@@ -9,6 +9,24 @@ Note: Currently, I am using `react-native-reanimated` for animation. So you shou
 `$ yarn add react-native-reanimated`
 
 ## Breaking changes
+### v3.4.0
+### Added:
+- You have to wrap your component inside `withCarouselContext`
+- `useCarouselContext` hook
+#### Removed:
+- Remove component's `ref`
+### Changed:
+- Methods `goNext`, `goPrev`, `snapToItem` now accessible via `useCarouselContext`
+```
+const {
+    goNext,
+    goPrev,
+    snapToItem
+  } = useCarouselContext();
+```
+
+<details>
+  <summary>Other versions</summary>
 
 ### v3.3.0
   - Changed: `renderItem` now required and add more props to easy customization
@@ -28,6 +46,8 @@ Note: Currently, I am using `react-native-reanimated` for animation. So you shou
     - `renderImage` -> `renderItem`
 ### v2.0.0
   - requires `react-native-reanimated@2.1.0`
+
+</details>
 
 ## Show cases
 

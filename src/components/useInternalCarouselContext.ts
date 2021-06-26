@@ -8,8 +8,5 @@ export const InternalCarouselContext = createContext<CarouselContextInternalType
 
 export function useInternalCarouselContext() {
   const ctx = useContext(InternalCarouselContext);
-  if (!ctx) {
-    console.log('Component should be rendered inside CarouselContainer');
-  }
   return ctx;
 }

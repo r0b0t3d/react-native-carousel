@@ -127,7 +127,6 @@ function App() {
       />
       <View>
         <PaginationIndicator
-          totalPage={data.length}
           containerStyle={{ marginTop: 20 }}
           activeIndicatorStyle={{
             height: 20,

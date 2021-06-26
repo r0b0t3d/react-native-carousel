@@ -8,13 +8,6 @@ Note: Currently, I am using `react-native-reanimated` for animation. So you shou
 
 `$ yarn add react-native-reanimated`
 
-## 🚀 Check out new version 
-There is new alpha version that using context to provide better way to interact with carousel. If you'd like to give it a try, run this
-
-`$ yarn add @r0b0t3d/react-native-carousel@alpha`
-
-More info [#17](https://github.com/r0b0t3d/react-native-carousel/pull/17)
-
 ## Breaking changes
 ### v3.4.0
 ### Added:

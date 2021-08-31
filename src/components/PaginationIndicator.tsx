@@ -4,7 +4,6 @@ import { View, StyleSheet, ViewStyle } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useDerivedValue,
-  useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
 import type { IndicatorConfigs, PaginationProps } from '../types';
@@ -42,15 +41,12 @@ const defaultSpringConfig = {
 };
 
 export default function PaginationIndicator({
-  // totalPage,
   containerStyle,
   indicatorStyle,
   activeIndicatorStyle,
   indicatorConfigs,
 }: PaginationProps) {
-  const carouselContext = useCarouselContext();
-  const page = useSharedValue(0);
-  const currentPage = carouselContext.currentPage || page;
+  const {currentPage, totalPage} = useCarouselContext();
 
   const configs = useMemo(() => {
     return {
@@ -134,7 +130,7 @@ export default function PaginationIndicator({
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {[...Array(carouselContext.totalPage.value).keys()].map(renderItem)}
+      {[...Array(totalPage.value).keys()].map(renderItem)}
       <Animated.View
         style={[
           styles.dotSelectedStyle,

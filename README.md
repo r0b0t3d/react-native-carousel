@@ -1,5 +1,8 @@
 # react-native-carousel
+[![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Fr0b0t3d%2Freact-native-carousel&count_bg=%2379C83D&title_bg=%23555555&icon=askfm.svg&icon_color=%23E7E7E7&title=hits&edge_flat=false)](https://hits.seeyoufarm.com)
+
 ![alt text](pictures/intro.gif "Intro")
+
 ## Getting started
 
 `$ yarn add @r0b0t3d/react-native-carousel`

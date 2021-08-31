@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import React, { useCallback, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -46,7 +46,7 @@ export default function PaginationIndicator({
   activeIndicatorStyle,
   indicatorConfigs,
 }: PaginationProps) {
-  const {currentPage, totalPage} = useCarouselContext();
+  const { currentPage, totalPage } = useCarouselContext();
 
   const configs = useMemo(() => {
     return {
@@ -72,7 +72,7 @@ export default function PaginationIndicator({
     };
   }, []);
 
-  const renderItem = useCallback((pageNumber: number) => {
+  function renderItem(pageNumber: number) {
     // @ts-ignore
     if (activeIndicatorStyle?.width) {
       console.error(
@@ -85,48 +85,17 @@ export default function PaginationIndicator({
         'Do not use indicatorStyle: { width }. Please use indicatorConfigs: { indicatorWidth } instead'
       );
     }
-    const dotContainerStyle: ViewStyle = StyleSheet.flatten([
-      styles.dotContainer,
-      {
-        width: configs.indicatorSelectedWidth,
-        height: configs.indicatorWidth,
-        marginEnd: configs.spaceBetween,
-      },
-      activeIndicatorStyle,
-      {
-        // Disable backgroundColor in activeIndicatorStyle
-        backgroundColor: undefined,
-      },
-    ]);
-    const dotStyle: ViewStyle = StyleSheet.flatten([
-      {
-        width: configs.indicatorWidth,
-        height: configs.indicatorWidth,
-        borderRadius: configs.indicatorWidth! / 2,
-        backgroundColor: configs.indicatorColor,
-      },
-      indicatorStyle,
-    ]);
-
-    const aStyle = useAnimatedStyle(() => {
-      return {
-        width: withSpring(
-          currentPage.value === pageNumber
-            ? configs.indicatorSelectedWidth!
-            : configs.indicatorWidth!,
-          defaultSpringConfig
-        ),
-      };
-    }, []);
     return (
-      <Animated.View
+      <IndicatorItem
         key={`index${pageNumber}`}
-        style={[dotContainerStyle, aStyle]}
-      >
-        <View style={dotStyle} />
-      </Animated.View>
+        currentPage={currentPage}
+        pageNumber={pageNumber}
+        configs={configs}
+        indicatorStyle={indicatorStyle}
+        activeIndicatorStyle={activeIndicatorStyle}
+      />
     );
-  }, []);
+  }
 
   return (
     <View style={[styles.container, containerStyle]}>
@@ -145,5 +114,63 @@ export default function PaginationIndicator({
         ]}
       />
     </View>
+  );
+}
+
+function IndicatorItem({
+  currentPage,
+  pageNumber,
+  configs,
+  activeIndicatorStyle,
+  indicatorStyle,
+}: {
+  currentPage: Animated.SharedValue<number>;
+  pageNumber: number;
+  configs: IndicatorConfigs;
+  activeIndicatorStyle?: ViewStyle;
+  indicatorStyle?: ViewStyle;
+}) {
+  const dotContainerStyle: ViewStyle = StyleSheet.flatten([
+    styles.dotContainer,
+    {
+      width: configs.indicatorSelectedWidth,
+      height: configs.indicatorWidth,
+      marginEnd: configs.spaceBetween,
+    },
+    activeIndicatorStyle,
+    {
+      // Disable backgroundColor in activeIndicatorStyle
+      backgroundColor: undefined,
+    },
+  ]);
+  const dotStyle: ViewStyle = StyleSheet.flatten([
+    {
+      width: configs.indicatorWidth,
+      height: configs.indicatorWidth,
+      borderRadius: configs.indicatorWidth! / 2,
+      backgroundColor: configs.indicatorColor,
+    },
+    indicatorStyle,
+  ]);
+
+  const animatedWidth = useDerivedValue(() => {
+    return withSpring(
+      currentPage.value === pageNumber
+        ? configs.indicatorSelectedWidth!
+        : configs.indicatorWidth!,
+      defaultSpringConfig
+    );
+  });
+
+  const aStyle = useAnimatedStyle(() => {
+    return {
+      width: animatedWidth.value,
+    };
+  }, []);
+
+  return (
+    <Animated.View style={[dotContainerStyle, aStyle]}>
+      <View style={dotStyle} />
+    </Animated.View>
   );
 }

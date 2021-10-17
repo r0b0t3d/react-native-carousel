@@ -307,8 +307,8 @@ function Carousel<TData>({
   return (
     <View style={style}>
       <Animated.ScrollView
-        ref={scrollViewRef}
         {...scrollViewProps}
+        ref={scrollViewRef}
         style={styles.container}
         horizontal
         disableScrollViewPanResponder
@@ -318,7 +318,7 @@ function Carousel<TData>({
         snapToStart
         snapToEnd
         decelerationRate="fast"
-        scrollEventThrottle={16}
+        scrollEventThrottle={4}
         onScroll={scrollHandler}
         bounces={false}
         contentContainerStyle={{

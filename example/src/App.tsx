@@ -101,7 +101,7 @@ function App() {
         initialPage={2}
         data={data}
         loop={true}
-        autoPlay={false}
+        autoPlay
         duration={3000}
         itemWidth={width - 100}
         inactiveOpacity={0.5}
@@ -109,7 +109,7 @@ function App() {
         firstItemAlignment="center"
         spaceBetween={10}
         spaceHeadTail={20}
-        additionalPagesPerSide={3}
+        additionalPagesPerSide={2}
         scrollViewProps={{
           scrollEnabled: true,
         }}

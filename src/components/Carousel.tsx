@@ -12,6 +12,7 @@ import Animated, {
   useSharedValue,
   useAnimatedScrollHandler,
   runOnJS,
+  useAnimatedRef,
 } from 'react-native-reanimated';
 import type { CarouselProps } from '../types';
 import PageItem from './PageItem';
@@ -44,9 +45,9 @@ function Carousel<TData>({
 }: CarouselProps<TData>) {
   const currentPage = useSharedValue(0);
   const animatedScroll = useSharedValue(currentPage.value * sliderWidth);
-  const freeze = useSharedValue(loop);
+  const freeze = useSharedValue(false);
   const [isDragging, setDragging] = useState(false);
-  const expectedPosition = useRef(-1);
+  const expectedPosition = useSharedValue(-1);
   const pageMapper = useRef<Record<number, number>>({});
   const { currentPage: animatedPage, totalPage } = useCarouselContext();
 
@@ -55,7 +56,7 @@ function Carousel<TData>({
     return firstItemAlignment === 'center' || loop ? padding : spaceHeadTail;
   }, [sliderWidth, itemWidth, firstItemAlignment, loop, spaceHeadTail]);
 
-  const scrollViewRef = useRef<any>(null);
+  const scrollViewRef = useAnimatedRef<any>();
 
   const offsets = useMemo(() => {
     return generateOffsets({
@@ -114,7 +115,7 @@ function Carousel<TData>({
 
   const jumpTo = useCallback(
     (page: number, delay = 200) => {
-      expectedPosition.current = page;
+      expectedPosition.value = page;
       if (Platform.OS === 'android') {
         freeze.value = true;
       }
@@ -187,12 +188,12 @@ function Carousel<TData>({
   const refreshPage = useCallback(
     (offset) => {
       'worklet';
-      const pageNum = findNearestPage(offset, offsets, 20);
+      const pageNum = findNearestPage(offset, offsets, 20);     
       if (pageNum === -1) {
         return;
       }
       if (pageNum !== currentPage.value) {
-        if (expectedPosition.current === pageNum) {
+        if (expectedPosition.value === pageNum) {
           freeze.value = false;
         }
         currentPage.value = pageNum;
@@ -304,7 +305,7 @@ function Carousel<TData>({
   }
 
   return (
-    <View style={[style]}>
+    <View style={style}>
       <Animated.ScrollView
         ref={scrollViewRef}
         {...scrollViewProps}

@@ -4,6 +4,7 @@ import { Image, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import Animated, {
   interpolate,
   useAnimatedStyle,
+  useDerivedValue,
 } from 'react-native-reanimated';
 import type { CarouselProps } from '../types';
 
@@ -34,42 +35,52 @@ export default function PageItem<TData = any>({
   inactiveScale,
   containerStyle,
 }: Props<TData>) {
-  // @ts-ignore
-  const animatedStyle = useAnimatedStyle(() => {
+  const scale = useDerivedValue(() => {
     const inputRange = [offset - itemWidth, offset, offset + itemWidth];
-    const scaleOutputRange = freeze.value
-      ? [1, 1, 1]
-      : [inactiveScale, 1, inactiveScale];
-    const opacityOutputRange = freeze.value
-      ? [1, 1, 1]
-      : [inactiveOpacity, 1, inactiveOpacity];
+    const scaleOutputRange = [inactiveScale, 1, inactiveScale];
+    return interpolate(animatedValue.value, inputRange, scaleOutputRange);
+  }, []);
+
+  const translateX = useDerivedValue(() => {
+    const inputRange = [offset - itemWidth, offset, offset + itemWidth];
     const parallaxOutputRange = freeze.value
       ? [0, 0, 0]
       : [-itemWidth / 2, 0, itemWidth / 4];
 
+    return interpolate(animatedValue.value, inputRange, parallaxOutputRange);
+  }, []);
+
+  const opacity = useDerivedValue(() => {
+    const inputRange = [offset - itemWidth, offset, offset + itemWidth];
+    const opacityOutputRange = freeze.value
+      ? [1, 1, 1]
+      : [inactiveOpacity, 1, inactiveOpacity];
+    return interpolate(animatedValue.value, inputRange, opacityOutputRange);
+  }, []);
+  // @ts-ignore
+  const animatedStyle = useAnimatedStyle(() => {
     const transform: ViewStyle['transform'] = [
       {
-        scale: interpolate(animatedValue.value, inputRange, scaleOutputRange),
+        scale: scale.value,
       },
     ];
     if (animation === 'parallax') {
       transform.push({
-        translateX: interpolate(
-          animatedValue.value,
-          inputRange,
-          parallaxOutputRange
-        ),
+        translateX: translateX.value,
       });
     }
     return {
-      opacity: interpolate(animatedValue.value, inputRange, opacityOutputRange),
+      opacity: opacity.value,
       transform,
     };
-  }, [inactiveScale, inactiveOpacity, animation, itemWidth, offset]);
+  }, []);
 
   function renderContent() {
     if (renderItem) {
-      return renderItem({ item, index }, { scrollPosition: animatedValue, offset });
+      return renderItem(
+        { item, index },
+        { scrollPosition: animatedValue, offset }
+      );
     }
     if (typeof item === 'object' && (item as any).source) {
       return (

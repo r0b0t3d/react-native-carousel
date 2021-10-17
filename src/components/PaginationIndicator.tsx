@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import React, { useMemo } from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useDerivedValue,
@@ -113,10 +113,10 @@ function IndicatorItem({
   currentPage: Animated.SharedValue<number>;
   pageNumber: number;
   configs: IndicatorConfigs;
-  activeIndicatorStyle?: ViewStyle;
-  indicatorStyle?: ViewStyle;
+  activeIndicatorStyle?: StyleProp<ViewStyle>;
+  indicatorStyle?: StyleProp<ViewStyle>;
 }) {
-  const dotContainerStyle: ViewStyle = StyleSheet.flatten([
+  const dotContainerStyle: StyleProp<ViewStyle> = useMemo(()=> [
     styles.dotContainer,
     {
       width: configs.indicatorSelectedWidth,
@@ -128,8 +128,9 @@ function IndicatorItem({
       // Disable backgroundColor in activeIndicatorStyle
       backgroundColor: undefined,
     },
-  ]);
-  const dotStyle: ViewStyle = StyleSheet.flatten([
+  ], [activeIndicatorStyle]);
+
+  const dotStyle: StyleProp<ViewStyle> = useMemo(() => [
     {
       width: configs.indicatorWidth,
       height: configs.indicatorWidth,
@@ -137,7 +138,7 @@ function IndicatorItem({
       backgroundColor: configs.indicatorColor,
     },
     indicatorStyle,
-  ]);
+  ], [indicatorStyle]);
 
   const animatedWidth = useDerivedValue(() => {
     return withSpring(

@@ -17,20 +17,6 @@ const defaultIndicatorConfigs: IndicatorConfigs = {
   spaceBetween: 3,
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  dotContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dotSelectedStyle: {
-    position: 'absolute',
-  },
-});
-
 const defaultSpringConfig = {
   stiffness: 1000,
   damping: 500,
@@ -174,3 +160,17 @@ function IndicatorItem({
     </Animated.View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dotContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dotSelectedStyle: {
+    position: 'absolute',
+  },
+});

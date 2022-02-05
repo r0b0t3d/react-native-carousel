@@ -105,7 +105,6 @@ export default function PageItem<TData = any>({
       style={[
         {
           width: itemWidth,
-          overflow: 'hidden',
         },
         containerStyle,
       ]}

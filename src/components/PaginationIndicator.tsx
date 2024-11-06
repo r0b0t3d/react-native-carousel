@@ -58,6 +58,15 @@ export default function PaginationIndicator({
     };
   }, []);
 
+  const dotStyle: StyleProp<ViewStyle> = useMemo(() => {
+    return {
+      width: configs.indicatorSelectedWidth,
+      height: configs.indicatorWidth,
+      borderRadius: (configs.indicatorWidth || 0) / 2,
+      backgroundColor: configs.indicatorSelectedColor,
+    };
+  }, [configs]);
+
   function renderItem(pageNumber: number) {
     // @ts-ignore
     if (activeIndicatorStyle?.width) {
@@ -89,12 +98,7 @@ export default function PaginationIndicator({
       <Animated.View
         style={[
           styles.dotSelectedStyle,
-          {
-            width: configs.indicatorSelectedWidth,
-            height: configs.indicatorWidth,
-            borderRadius: configs.indicatorWidth! / 2,
-            backgroundColor: configs.indicatorSelectedColor,
-          },
+          dotStyle,
           activeIndicatorStyle,
           animatedStyle,
         ]}

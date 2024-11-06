@@ -28,6 +28,7 @@ export type CarouselProps<T = any> = {
   ) => React.ReactNode;
   onPageChange?: (index: number) => void;
   keyExtractor?: (item: T, index?: number) => string;
+  onItemPress?: (item: T, index?: number) => void;
 };
 
 export type CarouselHandles = {

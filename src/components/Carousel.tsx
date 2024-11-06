@@ -20,7 +20,9 @@ import { findNearestPage, generateOffsets } from '../utils';
 import { useCarouselContext } from './useCarouselContext';
 import { useInternalCarouselContext } from './useInternalCarouselContext';
 
-const { width: wWidth } = Dimensions.get('screen');
+const getScreenWidth = () => {
+  return Dimensions.get('screen').width;
+};
 
 function Carousel<TData>({
   style,
@@ -31,8 +33,8 @@ function Carousel<TData>({
   autoPlay = false,
   duration = 1000,
   animation,
-  sliderWidth = wWidth,
-  itemWidth = wWidth,
+  sliderWidth = getScreenWidth(),
+  itemWidth = getScreenWidth(),
   firstItemAlignment = 'center',
   inactiveOpacity = 1,
   inactiveScale = 1,
@@ -42,14 +44,19 @@ function Carousel<TData>({
   onPageChange,
   scrollViewProps = {},
   keyExtractor,
+  onItemPress
 }: CarouselProps<TData>) {
   const currentPage = useSharedValue(0);
-  const animatedScroll = useSharedValue(currentPage.value * sliderWidth);
+  const animatedScroll = useSharedValue(0);
   const freeze = useSharedValue(false);
   const [isDragging, setDragging] = useState(false);
   const expectedPosition = useSharedValue(-1);
   const pageMapper = useRef<Record<number, number>>({});
   const { currentPage: animatedPage, totalPage } = useCarouselContext();
+
+  useEffect(() => {
+    animatedScroll.value = currentPage.value * sliderWidth;
+  }, []);
 
   const horizontalPadding = useMemo(() => {
     const padding = (sliderWidth - itemWidth) / 2;
@@ -285,6 +292,19 @@ function Carousel<TData>({
     [spaceBetween, firstItemAlignment]
   );
 
+  const handleItemPress = useCallback((item: TData, index: number) => () => {
+    handleScrollTo(index);
+    if (onItemPress) {
+      onItemPress(item, index);
+    }
+  }, [onItemPress, handlePageChange]);
+
+  const contentContainerStyle = useMemo(() => {
+    return {
+      paddingHorizontal: horizontalPadding,
+    };
+  }, [horizontalPadding]);
+
   function renderPage(item: TData, i: number) {
     return (
       <PageItem
@@ -300,6 +320,7 @@ function Carousel<TData>({
         freeze={freeze}
         inactiveOpacity={inactiveOpacity}
         inactiveScale={inactiveScale}
+        onPress={handleItemPress(item, i)}
       />
     );
   }
@@ -321,9 +342,7 @@ function Carousel<TData>({
         scrollEventThrottle={4}
         onScroll={scrollHandler}
         bounces={false}
-        contentContainerStyle={{
-          paddingHorizontal: horizontalPadding,
-        }}
+        contentContainerStyle={contentContainerStyle}
       >
         {pageItems.map(renderPage)}
       </Animated.ScrollView>

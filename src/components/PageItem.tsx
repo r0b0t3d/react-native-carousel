@@ -1,6 +1,12 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import React from 'react';
-import { Image, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import React, { useMemo } from 'react';
+import {
+  Image,
+  StyleProp,
+  StyleSheet,
+  TouchableOpacity,
+  ViewStyle,
+} from 'react-native';
 import Animated, {
   interpolate,
   useAnimatedStyle,
@@ -20,6 +26,7 @@ type Props<TData> = {
   inactiveOpacity: number;
   inactiveScale: number;
   containerStyle: StyleProp<ViewStyle>;
+  onPress: () => void;
 };
 
 export default function PageItem<TData = any>({
@@ -34,6 +41,7 @@ export default function PageItem<TData = any>({
   inactiveOpacity,
   inactiveScale,
   containerStyle,
+  onPress,
 }: Props<TData>) {
   const scale = useDerivedValue(() => {
     const inputRange = [offset - itemWidth, offset, offset + itemWidth];
@@ -86,11 +94,7 @@ export default function PageItem<TData = any>({
       return (
         <Image
           source={(item as any).source}
-          style={{
-            ...StyleSheet.absoluteFillObject,
-            height: undefined,
-            width: undefined,
-          }}
+          style={styles.image}
           resizeMode="cover"
         />
       );
@@ -99,20 +103,36 @@ export default function PageItem<TData = any>({
     return null;
   }
 
+  const mContainerStyle: StyleProp<ViewStyle> = useMemo(() => {
+    return [
+      {
+        width: itemWidth,
+        overflow: 'hidden',
+      },
+      containerStyle,
+    ];
+  }, [itemWidth, containerStyle]);
+
   return (
-    <View
-      collapsable={false}
-      style={[
-        {
-          width: itemWidth,
-          overflow: 'hidden',
-        },
-        containerStyle,
-      ]}
+    <TouchableOpacity
+      activeOpacity={0.9}
+      style={mContainerStyle}
+      onPress={onPress}
     >
-      <Animated.View style={[{ flex: 1 }, animatedStyle]}>
+      <Animated.View style={[styles.container, animatedStyle]}>
         {renderContent()}
       </Animated.View>
-    </View>
+    </TouchableOpacity>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  image: {
+    ...StyleSheet.absoluteFillObject,
+    height: undefined,
+    width: undefined,
+  },
+});

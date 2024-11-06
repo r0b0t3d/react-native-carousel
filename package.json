@@ -31,7 +31,7 @@
     "ios",
     "android"
   ],
-  "repository": "https://github.com/r0b0t3d/react-native-carousel",
+  "repository": "git@github.com:r0b0t3d/react-native-carousel.git",
   "author": "Tuan Luong <tuanluong.it@gmail.com> (https://github.com/r0b0t3d)",
   "license": "MIT",
   "bugs": {

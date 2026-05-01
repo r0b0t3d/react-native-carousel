@@ -94,7 +94,7 @@ export default function PageItem<TData = any>({
       return (
         <Image
           source={(item as any).source}
-          style={styles.image}
+          style={[styles.image, StyleSheet.absoluteFill]}
           resizeMode="cover"
         />
       );
@@ -131,7 +131,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   image: {
-    ...StyleSheet.absoluteFillObject,
     height: undefined,
     width: undefined,
   },

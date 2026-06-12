@@ -2,13 +2,14 @@
 import React, { useMemo } from 'react';
 import {
   Image,
+  Pressable,
   StyleProp,
   StyleSheet,
-  TouchableOpacity,
   ViewStyle,
 } from 'react-native';
 import Animated, {
   interpolate,
+  SharedValue,
   useAnimatedStyle,
   useDerivedValue,
 } from 'react-native-reanimated';
@@ -19,15 +20,49 @@ type Props<TData> = {
   index: number;
   offset: number;
   renderItem: CarouselProps['renderItem'];
-  animatedValue: Animated.SharedValue<number>;
+  animatedValue: SharedValue<number>;
   animation?: 'parallax';
-  freeze: Animated.SharedValue<boolean>;
+  freeze: SharedValue<boolean>;
   itemWidth: number;
   inactiveOpacity: number;
   inactiveScale: number;
   containerStyle: StyleProp<ViewStyle>;
-  onPress: () => void;
+  onPress?: () => void;
 };
+
+// Pull the inline renderContent() into a named component so React
+// preserves its identity across renders and doesn't remount internal
+// state (images, nested components, etc.).
+function PageContent<TData>({
+  renderItem,
+  item,
+  index,
+  animatedValue,
+  offset,
+}: {
+  renderItem: CarouselProps['renderItem'];
+  item: TData;
+  index: number;
+  animatedValue: SharedValue<number>;
+  offset: number;
+}) {
+  if (renderItem) {
+    return renderItem(
+      { item, index },
+      { scrollPosition: animatedValue, offset }
+    );
+  }
+  if (typeof item === 'object' && (item as any).source) {
+    return (
+      <Image
+        source={(item as any).source}
+        style={[STYLES.image, StyleSheet.absoluteFill]}
+        resizeMode="cover"
+      />
+    );
+  }
+  return null;
+}
 
 export default function PageItem<TData = any>({
   item,
@@ -67,7 +102,7 @@ export default function PageItem<TData = any>({
   }, []);
   // @ts-ignore
   const animatedStyle = useAnimatedStyle(() => {
-    const transform: ViewStyle['transform'] = [
+    const transform: any = [
       {
         scale: scale.value,
       },
@@ -83,26 +118,6 @@ export default function PageItem<TData = any>({
     };
   }, []);
 
-  function renderContent() {
-    if (renderItem) {
-      return renderItem(
-        { item, index },
-        { scrollPosition: animatedValue, offset }
-      );
-    }
-    if (typeof item === 'object' && (item as any).source) {
-      return (
-        <Image
-          source={(item as any).source}
-          style={[styles.image, StyleSheet.absoluteFill]}
-          resizeMode="cover"
-        />
-      );
-    }
-    console.error('You need implement renderItem');
-    return null;
-  }
-
   const mContainerStyle: StyleProp<ViewStyle> = useMemo(() => {
     return [
       {
@@ -114,19 +129,27 @@ export default function PageItem<TData = any>({
   }, [itemWidth, containerStyle]);
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.9}
-      style={mContainerStyle}
+    <Pressable
+      style={({ pressed }) => [
+        mContainerStyle,
+        pressed && { opacity: 0.9 },
+      ]}
       onPress={onPress}
     >
-      <Animated.View style={[styles.container, animatedStyle]}>
-        {renderContent()}
+      <Animated.View style={[STYLES.container, animatedStyle]}>
+        <PageContent
+          renderItem={renderItem}
+          item={item}
+          index={index}
+          animatedValue={animatedValue}
+          offset={offset}
+        />
       </Animated.View>
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
+const STYLES = StyleSheet.create({
   container: {
     flex: 1,
   },

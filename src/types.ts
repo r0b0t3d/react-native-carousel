@@ -1,5 +1,6 @@
 import type { ScrollViewProps, StyleProp, ViewStyle } from 'react-native';
 import type Animated from 'react-native-reanimated';
+import { SharedValue } from 'react-native-reanimated';
 
 export type CarouselProps<T = any> = {
   style?: StyleProp<ViewStyle>;
@@ -17,18 +18,20 @@ export type CarouselProps<T = any> = {
   inactiveScale?: number;
   spaceBetween?: number;
   spaceHeadTail?: number;
-  animatedPage?: Animated.SharedValue<number>;
+  animatedPage?: SharedValue<number>;
   scrollViewProps?: ScrollViewProps;
   renderItem: (
     data: { item: T; index?: number },
     animatedData?: {
-      scrollPosition?: Animated.SharedValue<number>;
+      scrollPosition?: SharedValue<number>;
       offset?: number;
     }
   ) => React.ReactNode;
   onPageChange?: (index: number) => void;
   keyExtractor?: (item: T, index?: number) => string;
   onItemPress?: (item: T, index?: number) => void;
+  disableItemPress?: boolean;
+  scrollViewRef?: any;
 };
 
 export type CarouselHandles = {
@@ -41,8 +44,8 @@ export type CarouselContextType = {
   goNext(): void;
   goPrev(): void;
   snapToItem(index: number, animated?: boolean): void;
-  currentPage: Animated.SharedValue<number>;
-  totalPage: Animated.SharedValue<number>;
+  currentPage: SharedValue<number>;
+  totalPage: SharedValue<number>;
 };
 
 export type CarouselContextInternalType = {
@@ -50,9 +53,9 @@ export type CarouselContextInternalType = {
 }
 
 export type AnimatorProps = {
-  animatedValue: Animated.SharedValue<number>;
+  animatedValue: SharedValue<number>;
   offset: number;
-  freeze: Animated.SharedValue<boolean>;
+  freeze: SharedValue<boolean>;
   itemWidth: number;
 };
 

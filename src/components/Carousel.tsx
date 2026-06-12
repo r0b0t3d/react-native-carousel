@@ -1,24 +1,59 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import React, {
   useState,
-  useRef,
   useEffect,
   useCallback,
   useMemo,
+  useRef,
 } from 'react';
-import { View, Dimensions, StyleSheet, Platform } from 'react-native';
+import { Dimensions, StyleSheet, Platform, AppState } from 'react-native';
 import { useInterval } from '@r0b0t3d/react-native-hooks';
 import Animated, {
   useSharedValue,
   useAnimatedScrollHandler,
-  runOnJS,
   useAnimatedRef,
+  scrollTo,
 } from 'react-native-reanimated';
+import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
 import type { CarouselProps } from '../types';
 import PageItem from './PageItem';
-import { findNearestPage, generateOffsets } from '../utils';
+import {
+  findNearestPage,
+  generateOffsets,
+  getLogicalPage,
+  getLoopBoundaryTarget,
+} from '../utils';
 import { useCarouselContext } from './useCarouselContext';
 import { useInternalCarouselContext } from './useInternalCarouselContext';
+
+// ---------------------------------------------------------------------------
+// Carousel state machine
+// ---------------------------------------------------------------------------
+// Transitions:
+//
+//   IDLE ── onBeginDrag ──► DRAGGING
+//   DRAGGING ── onMomentumEnd ──► IDLE (or LOOP_JUMP at boundary)
+//   LOOP_JUMP ── onScroll (arrival) ──► IDLE
+//   LOOP_JUMP ── onBeginDrag (user overrides) ──► DRAGGING
+//
+// Page change (onPageChange / animatedPage) only fires at IDLE transitions.
+// Autoplay only advances when state === IDLE.
+// ---------------------------------------------------------------------------
+
+enum CarouselState {
+  IDLE = 0,
+  DRAGGING = 1,
+  LOOP_JUMP = 2,
+}
+
+// ---------------------------------------------------------------------------
+// Terminology
+// ---------------------------------------------------------------------------
+//   render index  – position in the padded pageItems array (includes loop
+//                   clones at head/tail). Used for scroll offsets.
+//   logical index – position in the original data array (0 .. data.length-1).
+//                   All consumer-facing callbacks receive logical indices.
+// ---------------------------------------------------------------------------
 
 const getScreenWidth = () => {
   return Dimensions.get('screen').width;
@@ -44,26 +79,36 @@ function Carousel<TData>({
   onPageChange,
   scrollViewProps = {},
   keyExtractor,
-  onItemPress
+  onItemPress,
+  disableItemPress = false,
+  scrollViewRef: externalScrollViewRef,
 }: CarouselProps<TData>) {
-  const currentPage = useSharedValue(0);
+  // ---- shared values (UI-thread state) ------------------------------------
+
+  const currentRenderPage = useSharedValue(0);
+  const currentLogicalPage = useSharedValue(0);
   const animatedScroll = useSharedValue(0);
+
+  const carouselState = useSharedValue(CarouselState.IDLE);
+  // Destination render page for a loop jump. Used to detect arrival via
+  // onScroll and release the jump lock.
+  const jumpDestination = useSharedValue(-1);
+  // Suppresses parallax/opacity animations during instant scrolls on
+  // Android where the scroll isn't truly synchronous.
   const freeze = useSharedValue(false);
-  const [isDragging, setDragging] = useState(false);
-  const expectedPosition = useSharedValue(-1);
-  const pageMapper = useRef<Record<number, number>>({});
+  // When false, autoplay is suppressed (app backgrounded). Plain ref —
+  // only read on JS thread by the autoplay interval.
+  const appActiveRef = useRef(true);
+
+  const internalAnimatedRef = useAnimatedRef<Animated.ScrollView>();
   const { currentPage: animatedPage, totalPage } = useCarouselContext();
 
-  useEffect(() => {
-    animatedScroll.value = currentPage.value * sliderWidth;
-  }, []);
+  // ---- derived values -----------------------------------------------------
 
   const horizontalPadding = useMemo(() => {
     const padding = (sliderWidth - itemWidth) / 2;
     return firstItemAlignment === 'center' || loop ? padding : spaceHeadTail;
   }, [sliderWidth, itemWidth, firstItemAlignment, loop, spaceHeadTail]);
-
-  const scrollViewRef = useAnimatedRef<any>();
 
   const offsets = useMemo(() => {
     return generateOffsets({
@@ -72,96 +117,147 @@ function Carousel<TData>({
       itemCount: data.length + (loop ? additionalPagesPerSide * 2 : 0),
       horizontalPadding,
     });
-  }, [sliderWidth, itemWidth, data, horizontalPadding]);
+  }, [sliderWidth, itemWidth, data.length, loop, additionalPagesPerSide, horizontalPadding]);
 
   const pageItems = useMemo(() => {
-    if (!data) {
+    if (!data || data.length === 0) {
       return [];
     }
-    totalPage.value = data.length;
     if (loop) {
       const headItems = data.slice(
         data.length - additionalPagesPerSide,
         data.length
       );
       const tailItems = data.slice(0, additionalPagesPerSide);
-      const newItems = [...headItems, ...data, ...tailItems];
-      for (let i = 0; i < newItems.length; i++) {
-        pageMapper.current[i] =
-          (data.length - additionalPagesPerSide + i) % data.length;
-      }
-      return newItems;
-    } else {
-      for (let i = 0; i < data.length; i++) {
-        pageMapper.current[i] = i;
-      }
-      return data;
+      return [...headItems, ...data, ...tailItems];
     }
-  }, [data, loop]);
+    return data;
+  }, [data, loop, additionalPagesPerSide]);
 
-  const getActualPage = useCallback((page: number) => {
-    return pageMapper.current[page];
+   // ---- page-change callback (JS thread) -----------------------------------
+
+  const handlePageChange = useCallback(
+    (logicalPage: number) => {
+      animatedPage.value = logicalPage;
+      if (onPageChange) {
+        onPageChange(logicalPage);
+      }
+    },
+    [onPageChange, animatedPage]
+  );
+
+  // ---- side effects -------------------------------------------------------
+
+  useEffect(() => {
+    totalPage.value = data.length;
+  }, [data.length, totalPage]);
+
+  // When the carousel layout or data changes (orientation, split-screen,
+  // toggling loop, data shrinking), reposition so the current logical
+  // page stays visible at its new render index and scroll offset.
+  useEffect(() => {
+    if (data.length === 0 || offsets.length === 0) return;
+
+    const prevLogical = currentLogicalPage.value;
+    const clampedLogical = Math.min(currentLogicalPage.value, data.length - 1);
+    const renderIdx = loop
+      ? clampedLogical + additionalPagesPerSide
+      : clampedLogical;
+    const safeRenderIdx = Math.max(0, Math.min(renderIdx, offsets.length - 1));
+    const safeLogicalIdx = getLogicalPage(
+      safeRenderIdx,
+      data.length,
+      additionalPagesPerSide,
+      loop
+    );
+
+    currentRenderPage.value = safeRenderIdx;
+    currentLogicalPage.value = safeLogicalIdx;
+    animatedPage.value = safeLogicalIdx;
+
+    const scrollOffset = renderOffset(safeRenderIdx);
+    animatedScroll.value = scrollOffset;
+
+    scheduleOnUI((idx: number, offsetVal: number) => {
+      'worklet';
+      scrollTo(internalAnimatedRef, offsetVal, 0, false);
+    }, safeRenderIdx, scrollOffset);
+
+    if (safeLogicalIdx !== prevLogical) {
+      handlePageChange(safeLogicalIdx);
+    }
+  }, [data.length, sliderWidth, itemWidth, loop, additionalPagesPerSide, offsets.length, handlePageChange]);
+
+  // ---- app-state listener (pause autoplay when backgrounded) --------------
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      appActiveRef.current = state === 'active';
+    });
+    return () => sub.remove();
   }, []);
 
-  const getRef = useCallback(() => {
-    if (!scrollViewRef.current) return;
-    if (scrollViewRef.current.scrollTo) {
-      return scrollViewRef.current;
-    }
-    return scrollViewRef.current.getNode();
-  }, []);
+  // ---- scroll helpers -----------------------------------------------------
+
+  // Safe accessor: returns offset for a render index, clamping to valid
+  // range and falling back to 0 if offsets is empty.
+  const renderOffset = useCallback(
+    (renderIdx: number): number => {
+      if (offsets.length === 0) return 0;
+      const clamped = Math.max(0, Math.min(renderIdx, offsets.length - 1));
+      return offsets[clamped];
+    },
+    [offsets]
+  );
 
   const handleScrollTo = useCallback(
     (page: number, animated = true) => {
-      if (getRef()) {
-        getRef().scrollTo({ x: offsets[page], y: 0, animated });
-      }
+      const offset = renderOffset(page);
+      scheduleOnUI((offsetVal: number, isAnimated: boolean) => {
+        'worklet';
+        scrollTo(internalAnimatedRef, offsetVal, 0, isAnimated);
+      }, offset, animated);
     },
-    [getRef, offsets]
+    [renderOffset, internalAnimatedRef]
   );
 
-  const jumpTo = useCallback(
-    (page: number, delay = 200) => {
-      expectedPosition.value = page;
-      if (Platform.OS === 'android') {
-        freeze.value = true;
-      }
-      setTimeout(() => {
-        animatedScroll.value = offsets[page];
-        handleScrollTo(page, false);
-      }, delay);
-    },
-    [handleScrollTo, animatedScroll, freeze]
-  );
+  // ---- navigation ---------------------------------------------------------
 
   const goNext = useCallback(() => {
-    const next = currentPage.value + 1;
-    handleScrollTo(next);
-  }, [handleScrollTo]);
+    if (carouselState.value !== CarouselState.IDLE || data.length === 0) return;
+    const next = currentRenderPage.value + 1;
+    if (next < offsets.length) {
+      currentRenderPage.value = next;
+      handleScrollTo(next);
+    }
+  }, [handleScrollTo, offsets.length, data.length]);
 
   const goPrev = useCallback(() => {
-    const prev = currentPage.value - 1;
-    handleScrollTo(prev);
+    if (carouselState.value !== CarouselState.IDLE || data.length === 0) return;
+    const prev = currentRenderPage.value - 1;
+    if (prev >= 0) {
+      currentRenderPage.value = prev;
+      handleScrollTo(prev);
+    }
   }, [handleScrollTo]);
 
   const snapToItem = useCallback(
     (index: number, animated = true) => {
+      if (data.length === 0) return;
       if (index < 0 || index >= data.length) {
         console.error(`Index not valid ${index}`);
         return;
       }
-      let pageIndex = index;
-      if (loop) {
-        const indices: number[] = Object.keys(pageMapper.current)
-          .filter((idx) => pageMapper.current[Number(idx)] === index)
-          .map((idx) => Number(idx));
-        const toIndex = findNearestPage(currentPage.value, indices, 10);
-        pageIndex = indices[toIndex];
-      }
-      handleScrollTo(pageIndex, animated);
+      const renderIndex = loop ? index + additionalPagesPerSide : index;
+      const clamped = Math.max(0, Math.min(renderIndex, offsets.length - 1));
+      currentRenderPage.value = clamped;
+      currentLogicalPage.value = index;
+      handleScrollTo(clamped, animated);
     },
-    [handleScrollTo]
+    [loop, additionalPagesPerSide, offsets.length, handleScrollTo, data.length]
   );
+
+  // ---- context wiring -----------------------------------------------------
 
   const { setCarouselHandlers } = useInternalCarouselContext();
 
@@ -175,76 +271,157 @@ function Carousel<TData>({
     }
   }, [goNext, goPrev, snapToItem, setCarouselHandlers]);
 
-  const handlePageChange = useCallback(
-    (page: number) => {
-      const actualPage = getActualPage(page);
-      animatedPage.value = actualPage;
-      if (onPageChange) {
-        onPageChange(actualPage);
-      }
-      if (!loop) return;
-      if (page === pageItems.length - 1) {
-        jumpTo(additionalPagesPerSide * 2 - 1);
-      } else if (page === 0) {
-        jumpTo(pageItems.length - additionalPagesPerSide * 2);
-      }
-    },
-    [onPageChange, loop, getActualPage, jumpTo, pageItems]
-  );
+  // ---- autoplay -----------------------------------------------------------
 
-  const refreshPage = useCallback(
-    (offset) => {
-      'worklet';
-      const pageNum = findNearestPage(offset, offsets, 20);     
-      if (pageNum === -1) {
-        return;
-      }
-      if (pageNum !== currentPage.value) {
-        if (expectedPosition.value === pageNum) {
-          freeze.value = false;
-        }
-        currentPage.value = pageNum;
-        runOnJS(handlePageChange)(pageNum);
-      }
-    },
-    [isDragging, offsets, handlePageChange]
-  );
+  // isDragging acts as a debounce — autoplay resumes 200ms after the
+  // user lifts their finger, preventing an immediate auto-advance.
+  const [autoplayPaused, setAutoplayPaused] = useState(false);
 
   useInterval(
     () => {
-      goNext();
+      if (
+        carouselState.value === CarouselState.IDLE &&
+        appActiveRef.current
+      ) {
+        goNext();
+      }
     },
-    !autoPlay || !loop || isDragging ? -1 : duration
+    !autoPlay || !loop || autoplayPaused ? -1 : duration
   );
 
+  // ---- initial page setup -------------------------------------------------
+
+  const didInitialMount = useRef(false);
+
   useEffect(() => {
+    if (didInitialMount.current) return;
+    didInitialMount.current = true;
+
+    if (data.length === 0) return;
     if (initialPage < 0 || initialPage >= data.length) {
       console.error(`Invalid initialPage ${initialPage}`);
       return;
     }
-    let pageIndex = initialPage;
-    if (loop) {
-      pageIndex = initialPage + additionalPagesPerSide;
-    }
-    if (currentPage.value !== pageIndex) {
-      setTimeout(() => {
-        handleScrollTo(pageIndex, false);
-        freeze.value = false;
-      });
-    }
-  }, []);
+    const renderIndex = loop ? initialPage + additionalPagesPerSide : initialPage;
+    const safeIdx = Math.max(0, Math.min(renderIndex, offsets.length - 1));
+    currentRenderPage.value = safeIdx;
+    currentLogicalPage.value = initialPage;
+    animatedPage.value = initialPage;
 
-  const beginDrag = useCallback(() => {
-    if (autoPlay) {
-      setDragging(true);
-    }
-  }, [autoPlay]);
+    scheduleOnUI((idx: number) => {
+      'worklet';
+      scrollTo(internalAnimatedRef, offsets[idx], 0, false);
+    }, safeIdx);
+    animatedScroll.value = offsets[safeIdx] ?? 0;
+  }, [data.length, initialPage, loop, additionalPagesPerSide, offsets]);
 
-  const endDrag = useCallback(() => {
-    if (autoPlay) {
-      setTimeout(() => setDragging(false), 200);
-    }
-  }, [autoPlay]);
+  // ---- scroll handler (UI thread worklet) ---------------------------------
+
+  const scrollHandler = useAnimatedScrollHandler(
+    {
+      onScroll: (event) => {
+        animatedScroll.value = event.contentOffset.x;
+
+        // During a loop jump, detect when the scroll arrives at the
+        // destination and transition back to IDLE.
+        if (
+          carouselState.value === CarouselState.LOOP_JUMP &&
+          jumpDestination.value !== -1
+        ) {
+          const nearest = findNearestPage(event.contentOffset.x, offsets);
+          if (nearest === jumpDestination.value) {
+            freeze.value = false;
+            carouselState.value = CarouselState.IDLE;
+            jumpDestination.value = -1;
+          }
+        }
+      },
+
+      onBeginDrag: (_e) => {
+        // User gesture always wins. Cancel any in-flight loop jump
+        // so the carousel doesn't fight the user's drag.
+        if (carouselState.value === CarouselState.LOOP_JUMP) {
+          jumpDestination.value = -1;
+          freeze.value = false;
+        }
+        carouselState.value = CarouselState.DRAGGING;
+        scheduleOnRN(setAutoplayPaused, true);
+      },
+
+      onEndDrag: (_e) => {
+        // Autoplay resumes in onMomentumEnd after momentum settles.
+      },
+
+      onMomentumEnd: (event) => {
+        // Only process page changes when dragging ended naturally.
+        // Loop jumps are handled in onScroll.
+        if (carouselState.value !== CarouselState.DRAGGING) {
+          return;
+        }
+
+        const offset = event.contentOffset.x;
+        if (isNaN(offset) || offsets.length === 0) {
+          carouselState.value = CarouselState.IDLE;
+          scheduleOnRN(setAutoplayPaused, false);
+          return;
+        }
+
+        const renderPage = findNearestPage(offset, offsets);
+
+        // Loop boundary — user scrolled into the cloned head/tail pages.
+        if (loop) {
+          const boundaryTarget = getLoopBoundaryTarget(
+            renderPage,
+            data.length,
+            additionalPagesPerSide
+          );
+          if (boundaryTarget !== -1) {
+            // Jump instantly to the matching real page.
+            // On Android, freeze animations during the jump to prevent
+            // a visual flash from the clones.
+            carouselState.value = CarouselState.LOOP_JUMP;
+            jumpDestination.value = boundaryTarget;
+            freeze.value = Platform.OS === 'android';
+            animatedScroll.value = offsets[boundaryTarget];
+            scrollTo(internalAnimatedRef, offsets[boundaryTarget], 0, false);
+
+            currentRenderPage.value = boundaryTarget;
+            currentLogicalPage.value = getLogicalPage(
+              boundaryTarget,
+              data.length,
+              additionalPagesPerSide,
+              loop
+            );
+            scheduleOnRN(handlePageChange, currentLogicalPage.value);
+            return;
+          }
+        }
+
+        // Normal page change — no loop boundary involved.
+        carouselState.value = CarouselState.IDLE;
+        currentRenderPage.value = renderPage;
+        currentLogicalPage.value = getLogicalPage(
+          renderPage,
+          data.length,
+          additionalPagesPerSide,
+          loop
+        );
+        scheduleOnRN(handlePageChange, currentLogicalPage.value);
+        // Autoplay only resumes once momentum fully settles.
+        scheduleOnRN(setAutoplayPaused, false);
+      },
+    },
+    [
+      offsets,
+      loop,
+      data.length,
+      additionalPagesPerSide,
+      handlePageChange,
+      internalAnimatedRef,
+    ]
+  );
+
+  // ---- render helpers -----------------------------------------------------
 
   const getItemKey = useCallback(
     (item: TData, index: number): string => {
@@ -254,99 +431,121 @@ function Carousel<TData>({
       if ((item as any).id) {
         return `${(item as any).id}-${index}`;
       }
-      console.error('You need implement keyExtractor');
-      return '';
+      return `carousel-item-${index}`;
     },
     [keyExtractor]
   );
 
-  const scrollHandler = useAnimatedScrollHandler(
-    {
-      onScroll: (event) => {
-        animatedScroll.value = event.contentOffset.x;
-        refreshPage(animatedScroll.value);
-      },
-      onBeginDrag: (_e) => {
-        runOnJS(beginDrag)();
-      },
-      onEndDrag: (_e) => {
-        runOnJS(endDrag)();
-      },
-    },
-    [beginDrag, endDrag, refreshPage]
-  );
-
-  const containerStyle = useCallback(
-    (index: number) => {
-      if (firstItemAlignment === 'start') {
+  const containerStyles = useMemo(() => {
+    if (data.length === 0) return [];
+    return pageItems.map((_, i) => {
+      if (firstItemAlignment !== 'start') {
         return {
-          paddingLeft: index === 0 ? 0 : spaceBetween / 2,
-          paddingRight: index === data.length - 1 ? 0 : spaceBetween / 2,
-        };
+          paddingLeft: spaceBetween / 2,
+          paddingRight: spaceBetween / 2,
+        } as const;
       }
+      const logicalIndex = loop
+        ? getLogicalPage(i, data.length, additionalPagesPerSide, loop)
+        : i;
       return {
-        paddingLeft: spaceBetween / 2,
-        paddingRight: spaceBetween / 2,
+        paddingLeft: logicalIndex === 0 ? 0 : spaceBetween / 2,
+        paddingRight:
+          logicalIndex === data.length - 1 ? 0 : spaceBetween / 2,
+      } as const;
+    });
+  }, [pageItems, firstItemAlignment, spaceBetween, data.length, loop, additionalPagesPerSide]);
+
+  const itemPressHandlers = useMemo(() => {
+    if (disableItemPress) return [];
+    return pageItems.map((item, i) => {
+      const logicalIndex = loop
+        ? getLogicalPage(i, data.length, additionalPagesPerSide, loop)
+        : i;
+      return () => {
+        handleScrollTo(i);
+        if (onItemPress) {
+          onItemPress(item, logicalIndex);
+        }
       };
-    },
-    [spaceBetween, firstItemAlignment]
+    });
+  }, [pageItems, disableItemPress, loop, data.length, additionalPagesPerSide, handleScrollTo, onItemPress]);
+
+  const contentContainerStyle = useMemo(
+    () => ({ paddingHorizontal: horizontalPadding }),
+    [horizontalPadding]
   );
 
-  const handleItemPress = useCallback((item: TData, index: number) => () => {
-    handleScrollTo(index);
-    if (onItemPress) {
-      onItemPress(item, index);
-    }
-  }, [onItemPress, handlePageChange]);
+  const renderPage = useCallback(
+    (item: TData, i: number) => {
+      // Compute the logical index so consumer callbacks (renderItem,
+      // onItemPress via `index` prop) receive logical, not render.
+      const logicalIndex = loop
+        ? getLogicalPage(i, data.length, additionalPagesPerSide, loop)
+        : i;
+      return (
+        <PageItem
+          key={getItemKey(item, i)}
+          containerStyle={containerStyles[i]}
+          item={item}
+          index={logicalIndex}
+          offset={offsets[i]}
+          itemWidth={itemWidth}
+          animatedValue={animatedScroll}
+          animation={animation}
+          renderItem={renderItem}
+          freeze={freeze}
+          inactiveOpacity={inactiveOpacity}
+          inactiveScale={inactiveScale}
+          onPress={itemPressHandlers[i]}
+        />
+      );
+    },
+    [
+      loop,
+      data.length,
+      additionalPagesPerSide,
+      getItemKey,
+      containerStyles,
+      offsets,
+      itemWidth,
+      animatedScroll,
+      animation,
+      renderItem,
+      freeze,
+      inactiveOpacity,
+      inactiveScale,
+      itemPressHandlers,
+    ]
+  );
 
-  const contentContainerStyle = useMemo(() => {
-    return {
-      paddingHorizontal: horizontalPadding,
-    };
-  }, [horizontalPadding]);
-
-  function renderPage(item: TData, i: number) {
-    return (
-      <PageItem
-        key={getItemKey(item, i)}
-        containerStyle={containerStyle(i)}
-        item={item}
-        index={i}
-        offset={offsets[i]}
-        itemWidth={itemWidth}
-        animatedValue={animatedScroll}
-        animation={animation}
-        renderItem={renderItem}
-        freeze={freeze}
-        inactiveOpacity={inactiveOpacity}
-        inactiveScale={inactiveScale}
-        onPress={handleItemPress(item, i)}
-      />
-    );
-  }
+  // ---- render -------------------------------------------------------------
 
   return (
-    <View style={style}>
-      <Animated.ScrollView
-        {...scrollViewProps}
-        ref={scrollViewRef}
-        style={styles.container}
-        horizontal
-        disableScrollViewPanResponder
-        disableIntervalMomentum
-        showsHorizontalScrollIndicator={false}
-        snapToOffsets={offsets}
-        snapToStart
-        snapToEnd
-        decelerationRate="fast"
-        scrollEventThrottle={4}
-        onScroll={scrollHandler}
-        bounces={false}
-        contentContainerStyle={contentContainerStyle}
-      >
-        {pageItems.map(renderPage)}
-      </Animated.ScrollView>
-    </View>
+    <Animated.ScrollView
+      {...scrollViewProps}
+      ref={(nativeRef: any) => {
+        internalAnimatedRef(nativeRef);
+        if (externalScrollViewRef) {
+          externalScrollViewRef.current = nativeRef;
+        }
+      }}
+      style={[styles.container, style]}
+      horizontal
+      disableScrollViewPanResponder
+      disableIntervalMomentum
+      showsHorizontalScrollIndicator={false}
+      snapToOffsets={offsets}
+      snapToStart
+      snapToEnd
+      decelerationRate="fast"
+      scrollEventThrottle={4}
+      onScroll={scrollHandler}
+      bounces={false}
+      contentContainerStyle={contentContainerStyle}
+    >
+      {pageItems.map(renderPage)}
+    </Animated.ScrollView>
   );
 }
 

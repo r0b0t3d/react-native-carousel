@@ -23,26 +23,46 @@ export const generateOffsets = ({
   return result;
 };
 
-export const findNearestPage = (
-  offset: number,
-  offsets: number[],
-  delta: number
-) => {
+export const findNearestPage = (offset: number, offsets: number[]): number => {
   'worklet';
-  let mid;
   let lo = 0;
   let hi = offsets.length - 1;
   while (hi - lo > 1) {
-    mid = Math.floor((lo + hi) / 2);
+    const mid = Math.floor((lo + hi) / 2);
     if (offsets[mid] < offset) {
       lo = mid;
     } else {
       hi = mid;
     }
   }
-  const nearestPage = offset - offsets[lo] <= offsets[hi] - offset ? lo : hi;
-  if (Math.abs(offsets[nearestPage] - offset) < delta) {
-    return nearestPage;
+  return offset - offsets[lo] <= offsets[hi] - offset ? lo : hi;
+};
+
+export function getLogicalPage(
+  renderIndex: number,
+  totalItems: number,
+  additionalPagesPerSide: number,
+  loop: boolean
+): number {
+  'worklet';
+  if (!loop) {
+    return renderIndex;
+  }
+  return (renderIndex - additionalPagesPerSide + totalItems) % totalItems;
+}
+
+export function getLoopBoundaryTarget(
+  renderPage: number,
+  totalPages: number,
+  additionalPagesPerSide: number
+): number {
+  'worklet';
+  const totalRenderPages = totalPages + additionalPagesPerSide * 2;
+  if (renderPage <= 0) {
+    return totalPages;
+  }
+  if (renderPage >= totalRenderPages - 1) {
+    return renderPage - totalPages;
   }
   return -1;
-};
+}

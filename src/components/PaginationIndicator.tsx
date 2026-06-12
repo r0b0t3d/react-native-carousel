@@ -1,10 +1,10 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
 import React, { useMemo } from 'react';
 import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useDerivedValue,
   withSpring,
+  type SharedValue,
 } from 'react-native-reanimated';
 import type { IndicatorConfigs, PaginationProps } from '../types';
 import { useCarouselContext } from './useCarouselContext';
@@ -114,7 +114,7 @@ function IndicatorItem({
   activeIndicatorStyle,
   indicatorStyle,
 }: {
-  currentPage: Animated.SharedValue<number>;
+  currentPage: SharedValue<number>;
   pageNumber: number;
   configs: IndicatorConfigs;
   activeIndicatorStyle?: StyleProp<ViewStyle>;

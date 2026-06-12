@@ -6,7 +6,7 @@ import React, {
   useRef,
 } from 'react';
 import { useSharedValue } from 'react-native-reanimated';
-import type { CarouselHandles } from 'src/types';
+import type { CarouselHandles } from '../types';
 import { CarouselContext } from './useCarouselContext';
 import { InternalCarouselContext } from './useInternalCarouselContext';
 
@@ -15,11 +15,11 @@ type Props = {
 };
 
 function CarouselContainer({ children }: Props) {
-  const carouselHandlers = useRef<CarouselHandles>();
+  const carouselHandlers = useRef<CarouselHandles>(null);
   const currentPage = useSharedValue(0);
   const totalPage = useSharedValue(0);
 
-  const setCarouselHandlers = useCallback((handlers) => {
+  const setCarouselHandlers = useCallback((handlers: CarouselHandles) => {
     carouselHandlers.current = handlers;
   }, []);
 
@@ -50,7 +50,7 @@ function CarouselContainer({ children }: Props) {
   );
 }
 
-export default function withCarouselContext<T>(Component: FC<T>) {
+export default function withCarouselContext<T extends Record<string, unknown>>(Component: FC<T>) {
   return (props: T) => {
     return (
       <CarouselContainer>

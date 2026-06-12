@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "ignoreDeprecations": "6.0",
     "baseUrl": "./",
     "paths": {
       "@r0b0t3d/react-native-carousel": ["./src/index"]

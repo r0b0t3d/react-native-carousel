@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
 import React, {
   useState,
   useEffect,
@@ -178,7 +177,7 @@ function Carousel<TData>({
     const scrollOffset = renderOffset(safeRenderIdx);
     animatedScroll.value = scrollOffset;
 
-    scheduleOnUI((idx: number, offsetVal: number) => {
+    scheduleOnUI((_idx: number, offsetVal: number) => {
       'worklet';
       scrollTo(internalAnimatedRef, offsetVal, 0, false);
     }, safeRenderIdx, scrollOffset);
@@ -337,7 +336,7 @@ function Carousel<TData>({
         }
       },
 
-      onBeginDrag: (_e) => {
+      onBeginDrag: () => {
         // User gesture always wins. Cancel any in-flight loop jump
         // so the carousel doesn't fight the user's drag.
         if (carouselState.value === CarouselState.LOOP_JUMP) {
@@ -348,7 +347,7 @@ function Carousel<TData>({
         scheduleOnRN(setAutoplayPaused, true);
       },
 
-      onEndDrag: (_e) => {
+      onEndDrag: () => {
         // Autoplay resumes in onMomentumEnd after momentum settles.
       },
 

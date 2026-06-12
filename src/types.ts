@@ -1,6 +1,5 @@
 import type { ScrollViewProps, StyleProp, ViewStyle } from 'react-native';
-import type Animated from 'react-native-reanimated';
-import { SharedValue } from 'react-native-reanimated';
+import type { SharedValue } from 'react-native-reanimated';
 
 export type CarouselProps<T = any> = {
   style?: StyleProp<ViewStyle>;

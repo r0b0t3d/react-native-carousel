@@ -31,11 +31,13 @@ import { useInternalCarouselContext } from './useInternalCarouselContext';
 // Transitions:
 //
 //   IDLE ── onBeginDrag ──► DRAGGING
+//   IDLE ── programmatic scroll ──► (stays IDLE, onMomentumEnd fires)
 //   DRAGGING ── onMomentumEnd ──► IDLE (or LOOP_JUMP at boundary)
 //   LOOP_JUMP ── onScroll (arrival) ──► IDLE
 //   LOOP_JUMP ── onBeginDrag (user overrides) ──► DRAGGING
 //
-// Page change (onPageChange / animatedPage) only fires at IDLE transitions.
+// Page change (onPageChange / animatedPage) fires from onMomentumEnd for
+// both user drags and programmatic scrolls (goNext / goPrev / snapToItem).
 // Autoplay only advances when state === IDLE.
 // ---------------------------------------------------------------------------
 
@@ -352,9 +354,10 @@ function Carousel<TData>({
       },
 
       onMomentumEnd: (event) => {
-        // Only process page changes when dragging ended naturally.
-        // Loop jumps are handled in onScroll.
-        if (carouselState.value !== CarouselState.DRAGGING) {
+        // Process page changes after both user drags and programmatic
+        // scrolls (goNext / goPrev / snapToItem). Loop jumps are
+        // instant scrolls that are resolved via onScroll instead.
+        if (carouselState.value === CarouselState.LOOP_JUMP) {
           return;
         }
 

@@ -2,7 +2,9 @@ const path = require('path');
 const pak = require('../package.json');
 
 module.exports = {
-  presets: ['module:@react-native/babel-preset'],
+  presets: [
+    ['module:@react-native/babel-preset', { enableBabelRuntime: '7.29.2' }],
+  ],
   plugins: [
     [
       'module-resolver',

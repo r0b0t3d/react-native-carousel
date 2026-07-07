@@ -5,7 +5,7 @@ import React, {
   useMemo,
   useRef,
 } from 'react';
-import { Dimensions, StyleSheet, Platform, AppState } from 'react-native';
+import { StyleSheet, Platform, AppState, useWindowDimensions } from 'react-native';
 import { useInterval } from '@r0b0t3d/react-native-hooks';
 import Animated, {
   useSharedValue,
@@ -56,10 +56,6 @@ enum CarouselState {
 //                   All consumer-facing callbacks receive logical indices.
 // ---------------------------------------------------------------------------
 
-const getScreenWidth = () => {
-  return Dimensions.get('screen').width;
-};
-
 function Carousel<TData>({
   style,
   data,
@@ -69,8 +65,8 @@ function Carousel<TData>({
   autoPlay = false,
   duration = 1000,
   animation,
-  sliderWidth = getScreenWidth(),
-  itemWidth = getScreenWidth(),
+  sliderWidth,
+  itemWidth,
   firstItemAlignment = 'center',
   inactiveOpacity = 1,
   inactiveScale = 1,
@@ -84,6 +80,10 @@ function Carousel<TData>({
   disableItemPress = false,
   scrollViewRef: externalScrollViewRef,
 }: CarouselProps<TData>) {
+  const { width: screenWidth } = useWindowDimensions();
+  const effectiveSliderWidth = sliderWidth ?? screenWidth;
+  const effectiveItemWidth = itemWidth ?? screenWidth;
+
   // ---- shared values (UI-thread state) ------------------------------------
 
   const currentRenderPage = useSharedValue(0);
@@ -107,18 +107,18 @@ function Carousel<TData>({
   // ---- derived values -----------------------------------------------------
 
   const horizontalPadding = useMemo(() => {
-    const padding = (sliderWidth - itemWidth) / 2;
+    const padding = (effectiveSliderWidth - effectiveItemWidth) / 2;
     return firstItemAlignment === 'center' || loop ? padding : spaceHeadTail;
-  }, [sliderWidth, itemWidth, firstItemAlignment, loop, spaceHeadTail]);
+  }, [effectiveSliderWidth, effectiveItemWidth, firstItemAlignment, loop, spaceHeadTail]);
 
   const offsets = useMemo(() => {
     return generateOffsets({
-      sliderWidth,
-      itemWidth,
+      sliderWidth: effectiveSliderWidth,
+      itemWidth: effectiveItemWidth,
       itemCount: data.length + (loop ? additionalPagesPerSide * 2 : 0),
       horizontalPadding,
     });
-  }, [sliderWidth, itemWidth, data.length, loop, additionalPagesPerSide, horizontalPadding]);
+  }, [effectiveSliderWidth, effectiveItemWidth, data.length, loop, additionalPagesPerSide, horizontalPadding]);
 
   const pageItems = useMemo(() => {
     if (!data || data.length === 0) {
@@ -135,7 +135,7 @@ function Carousel<TData>({
     return data;
   }, [data, loop, additionalPagesPerSide]);
 
-   // ---- page-change callback (JS thread) -----------------------------------
+  // ---- page-change callback (JS thread) -----------------------------------
 
   const handlePageChange = useCallback(
     (logicalPage: number) => {
@@ -187,7 +187,7 @@ function Carousel<TData>({
     if (safeLogicalIdx !== prevLogical) {
       handlePageChange(safeLogicalIdx);
     }
-  }, [data.length, sliderWidth, itemWidth, loop, additionalPagesPerSide, offsets.length, handlePageChange]);
+  }, [data.length, effectiveSliderWidth, effectiveItemWidth, loop, additionalPagesPerSide, offsets.length, handlePageChange]);
 
   // ---- app-state listener (pause autoplay when backgrounded) --------------
 
@@ -318,6 +318,12 @@ function Carousel<TData>({
 
   // ---- scroll handler (UI thread worklet) ---------------------------------
 
+  // Snapshot as a primitive so the worklets below close over a number,
+  // not the `data` array itself — `data` items may contain non-shareable
+  // values (e.g. JSX elements), which Reanimated can't clone for the UI
+  // thread ([Worklets] Cannot copy value of type `FiberNode`).
+  const dataLength = data.length;
+
   const scrollHandler = useAnimatedScrollHandler(
     {
       onScroll: (event) => {
@@ -374,7 +380,7 @@ function Carousel<TData>({
         if (loop) {
           const boundaryTarget = getLoopBoundaryTarget(
             renderPage,
-            data.length,
+            dataLength,
             additionalPagesPerSide
           );
           if (boundaryTarget !== -1) {
@@ -390,7 +396,7 @@ function Carousel<TData>({
             currentRenderPage.value = boundaryTarget;
             currentLogicalPage.value = getLogicalPage(
               boundaryTarget,
-              data.length,
+              dataLength,
               additionalPagesPerSide,
               loop
             );
@@ -404,7 +410,7 @@ function Carousel<TData>({
         currentRenderPage.value = renderPage;
         currentLogicalPage.value = getLogicalPage(
           renderPage,
-          data.length,
+          dataLength,
           additionalPagesPerSide,
           loop
         );
@@ -416,7 +422,7 @@ function Carousel<TData>({
     [
       offsets,
       loop,
-      data.length,
+      dataLength,
       additionalPagesPerSide,
       handlePageChange,
       internalAnimatedRef,
@@ -492,7 +498,7 @@ function Carousel<TData>({
           item={item}
           index={logicalIndex}
           offset={offsets[i]}
-          itemWidth={itemWidth}
+          itemWidth={effectiveItemWidth}
           animatedValue={animatedScroll}
           animation={animation}
           renderItem={renderItem}
@@ -510,7 +516,7 @@ function Carousel<TData>({
       getItemKey,
       containerStyles,
       offsets,
-      itemWidth,
+      effectiveItemWidth,
       animatedScroll,
       animation,
       renderItem,

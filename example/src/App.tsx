@@ -13,8 +13,8 @@ import {
   StyleSheet,
   View,
   Image,
-  Dimensions,
-  TouchableOpacity,
+  useWindowDimensions,
+  Pressable,
   Text,
   ImageProps,
 } from 'react-native';
@@ -76,9 +76,8 @@ const data: CarouselData[] = [
   },
 ];
 
-const { width } = Dimensions.get('window');
-
 function App() {
+  const { width } = useWindowDimensions();
   const { goNext, goPrev, snapToItem } = useCarouselContext();
 
   const handleRandom = useCallback(() => {
@@ -141,15 +140,15 @@ function App() {
       </View>
 
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={handlePrev}>
+        <Pressable style={({ pressed }) => [styles.button, pressed && { opacity: 0.7 }]} onPress={handlePrev}>
           <Text>PREV</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={handleRandom}>
+        </Pressable>
+        <Pressable style={({ pressed }) => [styles.button, pressed && { opacity: 0.7 }]} onPress={handleRandom}>
           <Text>RANDOM</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={handleNext}>
+        </Pressable>
+        <Pressable style={({ pressed }) => [styles.button, pressed && { opacity: 0.7 }]} onPress={handleNext}>
           <Text>NEXT</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </View>
   );

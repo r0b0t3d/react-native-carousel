@@ -15,10 +15,12 @@ See [react-native-animation/taste.md](react-native-animation/taste.md)
 
 # Workflow
 - When React Doctor issues are raised, offer to set up React Doctor CI first before fixing issues. Confidence: 0.75
-- After applying a fix, re-run the actual linting/analysis tool (e.g., npx react-doctor@latest --verbose) to verify the issue is resolved before moving on. Confidence: 0.75
+- After applying a fix, re-run the actual linting/analysis tool (e.g., npx react-doctor@latest --verbose) to verify the issue is resolved before moving on. Confidence: 0.80
+- When there are many React Doctor issues, fix the top N in one focused batch and leave the rest for follow-up passes. Confidence: 0.70
+- When fixing React Doctor issues, group fixes by fixGroupId (each fixGroupId is one root cause that clears all associated findings). Confidence: 0.70
 
 # Code Style
-- Fix the root cause of linting/analysis issues rather than suppressing or silencing the rule. Confidence: 0.70
+- Fix the root cause of linting/analysis issues rather than suppressing or silencing the rule. Confidence: 0.75
 
 # Communication
-- When fixing issues, explain each one in plain language as you go: what the problem is, why it matters, and the real-world impact/concrete severity. Confidence: 0.70
+- When fixing issues, explain each one in plain language as you go: what the problem is, why it matters, and the real-world impact/concrete severity. Confidence: 0.75

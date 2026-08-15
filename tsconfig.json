@@ -22,6 +22,9 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "strict": true,
-    "target": "esnext"
+    "target": "esnext",
+    // Jest's ambient globals (describe/test/expect/jest/...) aren't picked
+    // up automatically in this project, needed for the __tests__ files.
+    "types": ["jest"]
   }
 }

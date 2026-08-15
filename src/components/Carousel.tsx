@@ -1,51 +1,13 @@
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-  useRef,
-} from 'react';
-import { StyleSheet, Platform, AppState, useWindowDimensions } from 'react-native';
-import { useInterval } from '@r0b0t3d/react-native-hooks';
-import Animated, {
-  useSharedValue,
-  useAnimatedScrollHandler,
-  useAnimatedRef,
-  scrollTo,
-} from 'react-native-reanimated';
-import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import { StyleSheet, useWindowDimensions } from 'react-native';
+import Animated from 'react-native-reanimated';
 import type { CarouselProps } from '../types';
 import PageItem from './PageItem';
-import {
-  findNearestPage,
-  generateOffsets,
-  getLogicalPage,
-  getLoopBoundaryTarget,
-} from '../utils';
+import { generateOffsets, getLogicalPage } from '../utils';
 import { useCarouselContext } from './useCarouselContext';
 import { useInternalCarouselContext } from './useInternalCarouselContext';
-
-// ---------------------------------------------------------------------------
-// Carousel state machine
-// ---------------------------------------------------------------------------
-// Transitions:
-//
-//   IDLE ── onBeginDrag ──► DRAGGING
-//   IDLE ── programmatic scroll ──► (stays IDLE, onMomentumEnd fires)
-//   DRAGGING ── onMomentumEnd ──► IDLE (or LOOP_JUMP at boundary)
-//   LOOP_JUMP ── onScroll (arrival) ──► IDLE
-//   LOOP_JUMP ── onBeginDrag (user overrides) ──► DRAGGING
-//
-// Page change (onPageChange / animatedPage) fires from onMomentumEnd for
-// both user drags and programmatic scrolls (goNext / goPrev / snapToItem).
-// Autoplay only advances when state === IDLE.
-// ---------------------------------------------------------------------------
-
-enum CarouselState {
-  IDLE = 0,
-  DRAGGING = 1,
-  LOOP_JUMP = 2,
-}
+import { useCarouselScroll } from './useCarouselScroll';
+import { useCarouselAutoplay } from './useCarouselAutoplay';
 
 // ---------------------------------------------------------------------------
 // Terminology
@@ -54,6 +16,9 @@ enum CarouselState {
 //                   clones at head/tail). Used for scroll offsets.
 //   logical index – position in the original data array (0 .. data.length-1).
 //                   All consumer-facing callbacks receive logical indices.
+// The scroll/state-machine mechanics (CarouselState, jumpDestination, the
+// scroll handler, navigation) live in useCarouselScroll; this component
+// wires that engine to context, props, and rendering.
 // ---------------------------------------------------------------------------
 
 function Carousel<TData>({
@@ -84,27 +49,9 @@ function Carousel<TData>({
   const effectiveSliderWidth = sliderWidth ?? screenWidth;
   const effectiveItemWidth = itemWidth ?? screenWidth;
 
-  // ---- shared values (UI-thread state) ------------------------------------
-
-  const currentRenderPage = useSharedValue(0);
-  const currentLogicalPage = useSharedValue(0);
-  const animatedScroll = useSharedValue(0);
-
-  const carouselState = useSharedValue(CarouselState.IDLE);
-  // Destination render page for a loop jump. Used to detect arrival via
-  // onScroll and release the jump lock.
-  const jumpDestination = useSharedValue(-1);
-  // Suppresses parallax/opacity animations during instant scrolls on
-  // Android where the scroll isn't truly synchronous.
-  const freeze = useSharedValue(false);
-  // When false, autoplay is suppressed (app backgrounded). Plain ref —
-  // only read on JS thread by the autoplay interval.
-  const appActiveRef = useRef(true);
-
-  const internalAnimatedRef = useAnimatedRef<Animated.ScrollView>();
   const { currentPage: animatedPage, totalPage } = useCarouselContext();
 
-  // ---- derived values -----------------------------------------------------
+  // ---- derived values -------------------------------------------------------
 
   const horizontalPadding = useMemo(() => {
     const padding = (effectiveSliderWidth - effectiveItemWidth) / 2;
@@ -118,24 +65,52 @@ function Carousel<TData>({
       itemCount: data.length + (loop ? additionalPagesPerSide * 2 : 0),
       horizontalPadding,
     });
-  }, [effectiveSliderWidth, effectiveItemWidth, data.length, loop, additionalPagesPerSide, horizontalPadding]);
+  }, [
+    effectiveSliderWidth,
+    effectiveItemWidth,
+    data.length,
+    loop,
+    additionalPagesPerSide,
+    horizontalPadding,
+  ]);
+
+  // Single source of truth for initialPage validity — initialRenderIndex,
+  // initialContentOffset, and the initial-page-setup effect below all derive
+  // from this so they can't disagree about whether initialPage is usable.
+  const isValidInitialPage = initialPage >= 0 && initialPage < data.length;
+
+  // Safe render index + native scroll offset for initialPage, used both to
+  // seed useCarouselScroll's shared values below and as the ScrollView's
+  // `contentOffset` — lets the native view mount already scrolled to the
+  // right page instead of scrolling it there after mount (which raced the
+  // animated ref's UI-thread registration).
+  // An invalid initialPage falls back to render index 0 rather than a
+  // clamped-but-misleading index, so the mounted visual position always
+  // agrees with the page-0 shared-value state seeded below.
+  const initialRenderIndex = useMemo(() => {
+    if (!isValidInitialPage) return 0;
+    const renderIndex = loop ? initialPage + additionalPagesPerSide : initialPage;
+    return Math.max(0, Math.min(renderIndex, offsets.length - 1));
+  }, [isValidInitialPage, initialPage, loop, additionalPagesPerSide, offsets.length]);
+
+  const initialContentOffset = useMemo(
+    () => offsets[initialRenderIndex] ?? 0,
+    [offsets, initialRenderIndex],
+  );
 
   const pageItems = useMemo(() => {
     if (!data || data.length === 0) {
       return [];
     }
     if (loop) {
-      const headItems = data.slice(
-        data.length - additionalPagesPerSide,
-        data.length
-      );
+      const headItems = data.slice(data.length - additionalPagesPerSide, data.length);
       const tailItems = data.slice(0, additionalPagesPerSide);
       return [...headItems, ...data, ...tailItems];
     }
     return data;
   }, [data, loop, additionalPagesPerSide]);
 
-  // ---- page-change callback (JS thread) -----------------------------------
+  // ---- page-change callback (JS thread) --------------------------------------
 
   const handlePageChange = useCallback(
     (logicalPage: number) => {
@@ -144,396 +119,220 @@ function Carousel<TData>({
         onPageChange(logicalPage);
       }
     },
-    [onPageChange, animatedPage]
+    [onPageChange, animatedPage],
   );
 
-  // ---- side effects -------------------------------------------------------
+  // ---- scroll / state-machine engine + autoplay ------------------------------
+
+  const scroll = useCarouselScroll({
+    dataLength: data.length,
+    loop,
+    additionalPagesPerSide,
+    offsets,
+    onPageChange: handlePageChange,
+  });
+
+  useCarouselAutoplay({
+    enabled: autoPlay && loop,
+    duration,
+    paused: scroll.autoplayPaused,
+    carouselState: scroll.carouselState,
+    goNext: scroll.goNext,
+  });
+
+  // ---- side effects -----------------------------------------------------------
+
+  // Hoisted above the reposition effect below, which reads it to skip its
+  // mount-time run (see that effect for why).
+  const didInitialMount = useRef(false);
 
   useEffect(() => {
     totalPage.value = data.length;
   }, [data.length, totalPage]);
 
   // When the carousel layout or data changes (orientation, split-screen,
-  // toggling loop, data shrinking), reposition so the current logical
-  // page stays visible at its new render index and scroll offset.
+  // toggling loop, data shrinking), reposition so the current logical page
+  // stays visible at its new render index and scroll offset.
   useEffect(() => {
+    // Skip on mount: this effect runs in the same commit as the "initial
+    // page setup" effect below, both scrolling from currentLogicalPage=0
+    // (the shared-value default) before initialPage has been applied —
+    // racing its scrollTo(initialPage) and leaving the ScrollView on page 0
+    // even though currentLogicalPage/animatedPage end up correct.
+    if (!didInitialMount.current) return;
     if (data.length === 0 || offsets.length === 0) return;
 
-    const prevLogical = currentLogicalPage.value;
-    const clampedLogical = Math.min(currentLogicalPage.value, data.length - 1);
-    const renderIdx = loop
-      ? clampedLogical + additionalPagesPerSide
-      : clampedLogical;
+    const prevLogical = scroll.currentLogicalPage.value;
+    const clampedLogical = Math.min(scroll.currentLogicalPage.value, data.length - 1);
+    const renderIdx = loop ? clampedLogical + additionalPagesPerSide : clampedLogical;
     const safeRenderIdx = Math.max(0, Math.min(renderIdx, offsets.length - 1));
-    const safeLogicalIdx = getLogicalPage(
-      safeRenderIdx,
-      data.length,
-      additionalPagesPerSide,
-      loop
-    );
+    const safeLogicalIdx = getLogicalPage(safeRenderIdx, data.length, additionalPagesPerSide, loop);
 
-    currentRenderPage.value = safeRenderIdx;
-    currentLogicalPage.value = safeLogicalIdx;
+    scroll.currentRenderPage.value = safeRenderIdx;
+    scroll.currentLogicalPage.value = safeLogicalIdx;
     animatedPage.value = safeLogicalIdx;
+    scroll.animatedScroll.value = offsets[safeRenderIdx];
 
-    const scrollOffset = renderOffset(safeRenderIdx);
-    animatedScroll.value = scrollOffset;
-
-    scheduleOnUI((_idx: number, offsetVal: number) => {
-      'worklet';
-      scrollTo(internalAnimatedRef, offsetVal, 0, false);
-    }, safeRenderIdx, scrollOffset);
+    scroll.scrollToRenderIndex(safeRenderIdx, false);
 
     if (safeLogicalIdx !== prevLogical) {
       handlePageChange(safeLogicalIdx);
     }
-  }, [data.length, effectiveSliderWidth, effectiveItemWidth, loop, additionalPagesPerSide, offsets.length, handlePageChange]);
+  }, [data.length, effectiveSliderWidth, effectiveItemWidth, loop, additionalPagesPerSide, offsets]);
 
-  // ---- app-state listener (pause autoplay when backgrounded) --------------
-
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', (state) => {
-      appActiveRef.current = state === 'active';
-    });
-    return () => sub.remove();
-  }, []);
-
-  // ---- scroll helpers -----------------------------------------------------
-
-  // Safe accessor: returns offset for a render index, clamping to valid
-  // range and falling back to 0 if offsets is empty.
-  const renderOffset = useCallback(
-    (renderIdx: number): number => {
-      if (offsets.length === 0) return 0;
-      const clamped = Math.max(0, Math.min(renderIdx, offsets.length - 1));
-      return offsets[clamped];
-    },
-    [offsets]
-  );
-
-  const handleScrollTo = useCallback(
-    (page: number, animated = true) => {
-      const offset = renderOffset(page);
-      scheduleOnUI((offsetVal: number, isAnimated: boolean) => {
-        'worklet';
-        scrollTo(internalAnimatedRef, offsetVal, 0, isAnimated);
-      }, offset, animated);
-    },
-    [renderOffset, internalAnimatedRef]
-  );
-
-  // ---- navigation ---------------------------------------------------------
-
-  const goNext = useCallback(() => {
-    if (carouselState.value !== CarouselState.IDLE || data.length === 0) return;
-    const next = currentRenderPage.value + 1;
-    if (next < offsets.length) {
-      currentRenderPage.value = next;
-      handleScrollTo(next);
-    }
-  }, [handleScrollTo, offsets.length, data.length]);
-
-  const goPrev = useCallback(() => {
-    if (carouselState.value !== CarouselState.IDLE || data.length === 0) return;
-    const prev = currentRenderPage.value - 1;
-    if (prev >= 0) {
-      currentRenderPage.value = prev;
-      handleScrollTo(prev);
-    }
-  }, [handleScrollTo]);
-
-  const snapToItem = useCallback(
-    (index: number, animated = true) => {
-      if (data.length === 0) return;
-      if (index < 0 || index >= data.length) {
-        console.error(`Index not valid ${index}`);
-        return;
-      }
-      const renderIndex = loop ? index + additionalPagesPerSide : index;
-      const clamped = Math.max(0, Math.min(renderIndex, offsets.length - 1));
-      currentRenderPage.value = clamped;
-      currentLogicalPage.value = index;
-      handleScrollTo(clamped, animated);
-    },
-    [loop, additionalPagesPerSide, offsets.length, handleScrollTo, data.length]
-  );
-
-  // ---- context wiring -----------------------------------------------------
+  // ---- context wiring -----------------------------------------------------------
 
   const { setCarouselHandlers } = useInternalCarouselContext();
 
   useEffect(() => {
     if (setCarouselHandlers) {
       setCarouselHandlers({
-        goNext,
-        goPrev,
-        snapToItem,
+        goNext: scroll.goNext,
+        goPrev: scroll.goPrev,
+        snapToItem: scroll.snapToItem,
       });
     }
-  }, [goNext, goPrev, snapToItem, setCarouselHandlers]);
+  }, [scroll.goNext, scroll.goPrev, scroll.snapToItem, setCarouselHandlers]);
 
-  // ---- autoplay -----------------------------------------------------------
+  // ---- initial page setup -------------------------------------------------------
 
-  // isDragging acts as a debounce — autoplay resumes 200ms after the
-  // user lifts their finger, preventing an immediate auto-advance.
-  const [autoplayPaused, setAutoplayPaused] = useState(false);
-
-  useInterval(
-    () => {
-      if (
-        carouselState.value === CarouselState.IDLE &&
-        appActiveRef.current
-      ) {
-        goNext();
-      }
-    },
-    !autoPlay || !loop || autoplayPaused ? -1 : duration
-  );
-
-  // ---- initial page setup -------------------------------------------------
-
-  const didInitialMount = useRef(false);
-
+  // Visual scroll position for initialPage is set declaratively via the
+  // ScrollView's `contentOffset` prop below (native-mount time, no ref
+  // needed — sidesteps the animated ref's UI-thread registration race).
+  // This effect only seeds the shared values that drive parallax/pagination
+  // state to match.
   useEffect(() => {
     if (didInitialMount.current) return;
     didInitialMount.current = true;
 
     if (data.length === 0) return;
-    if (initialPage < 0 || initialPage >= data.length) {
+    if (!isValidInitialPage) {
       console.error(`Invalid initialPage ${initialPage}`);
-      return;
     }
-    const renderIndex = loop ? initialPage + additionalPagesPerSide : initialPage;
-    const safeIdx = Math.max(0, Math.min(renderIndex, offsets.length - 1));
-    currentRenderPage.value = safeIdx;
-    currentLogicalPage.value = initialPage;
-    animatedPage.value = initialPage;
+    // Invalid initialPage falls back to page 0 — matches initialRenderIndex
+    // /initialContentOffset above, so the seeded state always agrees with
+    // where the ScrollView actually mounted.
+    const seededLogicalPage = isValidInitialPage ? initialPage : 0;
+    scroll.currentRenderPage.value = initialRenderIndex;
+    scroll.currentLogicalPage.value = seededLogicalPage;
+    animatedPage.value = seededLogicalPage;
+    scroll.animatedScroll.value = initialContentOffset;
+  }, [data.length, initialPage, isValidInitialPage, initialRenderIndex, initialContentOffset]);
 
-    scheduleOnUI((idx: number) => {
-      'worklet';
-      scrollTo(internalAnimatedRef, offsets[idx], 0, false);
-    }, safeIdx);
-    animatedScroll.value = offsets[safeIdx] ?? 0;
-  }, [data.length, initialPage, loop, additionalPagesPerSide, offsets]);
+  // ---- render helpers -----------------------------------------------------------
 
-  // ---- scroll handler (UI thread worklet) ---------------------------------
-
-  // Snapshot as a primitive so the worklets below close over a number,
-  // not the `data` array itself — `data` items may contain non-shareable
-  // values (e.g. JSX elements), which Reanimated can't clone for the UI
-  // thread ([Worklets] Cannot copy value of type `FiberNode`).
-  const dataLength = data.length;
-
-  const scrollHandler = useAnimatedScrollHandler(
-    {
-      onScroll: (event) => {
-        animatedScroll.value = event.contentOffset.x;
-
-        // During a loop jump, detect when the scroll arrives at the
-        // destination and transition back to IDLE.
-        if (
-          carouselState.value === CarouselState.LOOP_JUMP &&
-          jumpDestination.value !== -1
-        ) {
-          const nearest = findNearestPage(event.contentOffset.x, offsets);
-          if (nearest === jumpDestination.value) {
-            freeze.value = false;
-            carouselState.value = CarouselState.IDLE;
-            jumpDestination.value = -1;
-          }
-        }
-      },
-
-      onBeginDrag: () => {
-        // User gesture always wins. Cancel any in-flight loop jump
-        // so the carousel doesn't fight the user's drag.
-        if (carouselState.value === CarouselState.LOOP_JUMP) {
-          jumpDestination.value = -1;
-          freeze.value = false;
-        }
-        carouselState.value = CarouselState.DRAGGING;
-        scheduleOnRN(setAutoplayPaused, true);
-      },
-
-      onEndDrag: () => {
-        // Autoplay resumes in onMomentumEnd after momentum settles.
-      },
-
-      onMomentumEnd: (event) => {
-        // Process page changes after both user drags and programmatic
-        // scrolls (goNext / goPrev / snapToItem). Loop jumps are
-        // instant scrolls that are resolved via onScroll instead.
-        if (carouselState.value === CarouselState.LOOP_JUMP) {
-          return;
-        }
-
-        const offset = event.contentOffset.x;
-        if (isNaN(offset) || offsets.length === 0) {
-          carouselState.value = CarouselState.IDLE;
-          scheduleOnRN(setAutoplayPaused, false);
-          return;
-        }
-
-        const renderPage = findNearestPage(offset, offsets);
-
-        // Loop boundary — user scrolled into the cloned head/tail pages.
-        if (loop) {
-          const boundaryTarget = getLoopBoundaryTarget(
-            renderPage,
-            dataLength,
-            additionalPagesPerSide
-          );
-          if (boundaryTarget !== -1) {
-            // Jump instantly to the matching real page.
-            // On Android, freeze animations during the jump to prevent
-            // a visual flash from the clones.
-            carouselState.value = CarouselState.LOOP_JUMP;
-            jumpDestination.value = boundaryTarget;
-            freeze.value = Platform.OS === 'android';
-            animatedScroll.value = offsets[boundaryTarget];
-            scrollTo(internalAnimatedRef, offsets[boundaryTarget], 0, false);
-
-            currentRenderPage.value = boundaryTarget;
-            currentLogicalPage.value = getLogicalPage(
-              boundaryTarget,
-              dataLength,
-              additionalPagesPerSide,
-              loop
-            );
-            scheduleOnRN(handlePageChange, currentLogicalPage.value);
-            return;
-          }
-        }
-
-        // Normal page change — no loop boundary involved.
-        carouselState.value = CarouselState.IDLE;
-        currentRenderPage.value = renderPage;
-        currentLogicalPage.value = getLogicalPage(
-          renderPage,
-          dataLength,
-          additionalPagesPerSide,
-          loop
-        );
-        scheduleOnRN(handlePageChange, currentLogicalPage.value);
-        // Autoplay only resumes once momentum fully settles.
-        scheduleOnRN(setAutoplayPaused, false);
-      },
-    },
-    [
-      offsets,
-      loop,
-      dataLength,
-      additionalPagesPerSide,
-      handlePageChange,
-      internalAnimatedRef,
-    ]
-  );
-
-  // ---- render helpers -----------------------------------------------------
-
+  // NOTE: keyExtractor is called with the render index (position in the
+  // padded/cloned pageItems array), not the logical index — this matches
+  // the pre-refactor behavior. It's arguably inconsistent with renderItem /
+  // onItemPress (which get the logical index), but that's a public-API
+  // behavior change and out of scope here; flagging as a possible future
+  // fix rather than making it silently.
   const getItemKey = useCallback(
-    (item: TData, index: number): string => {
+    (item: TData, renderIndex: number): string => {
       if (keyExtractor) {
-        return `${keyExtractor(item, index)}-${index}`;
+        return `${keyExtractor(item, renderIndex)}-${renderIndex}`;
       }
       if ((item as any).id) {
-        return `${(item as any).id}-${index}`;
+        return `${(item as any).id}-${renderIndex}`;
       }
-      return `carousel-item-${index}`;
+      return `carousel-item-${renderIndex}`;
     },
-    [keyExtractor]
+    [keyExtractor],
   );
 
-  const containerStyles = useMemo(() => {
-    if (data.length === 0) return [];
-    return pageItems.map((_, i) => {
-      if (firstItemAlignment !== 'start') {
-        return {
-          paddingLeft: spaceBetween / 2,
-          paddingRight: spaceBetween / 2,
-        } as const;
-      }
-      const logicalIndex = loop
-        ? getLogicalPage(i, data.length, additionalPagesPerSide, loop)
-        : i;
-      return {
-        paddingLeft: logicalIndex === 0 ? 0 : spaceBetween / 2,
-        paddingRight:
-          logicalIndex === data.length - 1 ? 0 : spaceBetween / 2,
-      } as const;
-    });
-  }, [pageItems, firstItemAlignment, spaceBetween, data.length, loop, additionalPagesPerSide]);
+  type PageModel = {
+    key: string;
+    item: TData;
+    logicalIndex: number;
+    offset: number;
+    containerStyle: { paddingLeft: number; paddingRight: number };
+    onPress?: () => void;
+  };
 
-  const itemPressHandlers = useMemo(() => {
-    if (disableItemPress) return [];
+  // Single pass over pageItems — containerStyle, the press handler, and the
+  // React key all need the logical index, so compute it once per item
+  // instead of re-deriving it three times.
+  const pageModels: PageModel[] = useMemo(() => {
     return pageItems.map((item, i) => {
-      const logicalIndex = loop
-        ? getLogicalPage(i, data.length, additionalPagesPerSide, loop)
-        : i;
-      return () => {
-        handleScrollTo(i);
-        if (onItemPress) {
-          onItemPress(item, logicalIndex);
-        }
+      const logicalIndex = loop ? getLogicalPage(i, data.length, additionalPagesPerSide, loop) : i;
+      const containerStyle =
+        firstItemAlignment !== 'start'
+          ? { paddingLeft: spaceBetween / 2, paddingRight: spaceBetween / 2 }
+          : {
+              paddingLeft: logicalIndex === 0 ? 0 : spaceBetween / 2,
+              paddingRight: logicalIndex === data.length - 1 ? 0 : spaceBetween / 2,
+            };
+      return {
+        key: getItemKey(item, i),
+        item,
+        logicalIndex,
+        offset: offsets[i],
+        containerStyle,
+        onPress: disableItemPress
+          ? undefined
+          : () => {
+              scroll.scrollToRenderIndex(i);
+              if (onItemPress) {
+                onItemPress(item, logicalIndex);
+              }
+            },
       };
     });
-  }, [pageItems, disableItemPress, loop, data.length, additionalPagesPerSide, handleScrollTo, onItemPress]);
+  }, [
+    pageItems,
+    data.length,
+    loop,
+    additionalPagesPerSide,
+    firstItemAlignment,
+    spaceBetween,
+    offsets,
+    getItemKey,
+    disableItemPress,
+    onItemPress,
+    scroll.scrollToRenderIndex,
+  ]);
 
   const contentContainerStyle = useMemo(
     () => ({ paddingHorizontal: horizontalPadding }),
-    [horizontalPadding]
+    [horizontalPadding],
   );
 
   const renderPage = useCallback(
-    (item: TData, i: number) => {
-      // Compute the logical index so consumer callbacks (renderItem,
-      // onItemPress via `index` prop) receive logical, not render.
-      const logicalIndex = loop
-        ? getLogicalPage(i, data.length, additionalPagesPerSide, loop)
-        : i;
-      return (
-        <PageItem
-          key={getItemKey(item, i)}
-          containerStyle={containerStyles[i]}
-          item={item}
-          index={logicalIndex}
-          offset={offsets[i]}
-          itemWidth={effectiveItemWidth}
-          animatedValue={animatedScroll}
-          animation={animation}
-          renderItem={renderItem}
-          freeze={freeze}
-          inactiveOpacity={inactiveOpacity}
-          inactiveScale={inactiveScale}
-          onPress={itemPressHandlers[i]}
-        />
-      );
-    },
+    (model: PageModel) => (
+      <PageItem
+        key={model.key}
+        containerStyle={model.containerStyle}
+        item={model.item}
+        index={model.logicalIndex}
+        offset={model.offset}
+        itemWidth={effectiveItemWidth}
+        animatedValue={scroll.animatedScroll}
+        animation={animation}
+        renderItem={renderItem}
+        freeze={scroll.freeze}
+        inactiveOpacity={inactiveOpacity}
+        inactiveScale={inactiveScale}
+        onPress={model.onPress}
+      />
+    ),
     [
-      loop,
-      data.length,
-      additionalPagesPerSide,
-      getItemKey,
-      containerStyles,
-      offsets,
       effectiveItemWidth,
-      animatedScroll,
+      scroll.animatedScroll,
       animation,
       renderItem,
-      freeze,
+      scroll.freeze,
       inactiveOpacity,
       inactiveScale,
-      itemPressHandlers,
-    ]
+    ],
   );
 
-  // ---- render -------------------------------------------------------------
+  // ---- render ---------------------------------------------------------------
 
   return (
     <Animated.ScrollView
       {...scrollViewProps}
       ref={(nativeRef: any) => {
-        internalAnimatedRef(nativeRef);
+        scroll.animatedRef(nativeRef);
         if (externalScrollViewRef) {
           externalScrollViewRef.current = nativeRef;
         }
@@ -548,11 +347,15 @@ function Carousel<TData>({
       snapToEnd
       decelerationRate="fast"
       scrollEventThrottle={4}
-      onScroll={scrollHandler}
+      onScroll={scroll.scrollHandler}
       bounces={false}
       contentContainerStyle={contentContainerStyle}
+      contentOffset={{
+        x: initialContentOffset,
+        y: 0,
+      }}
     >
-      {pageItems.map(renderPage)}
+      {pageModels.map(renderPage)}
     </Animated.ScrollView>
   );
 }
